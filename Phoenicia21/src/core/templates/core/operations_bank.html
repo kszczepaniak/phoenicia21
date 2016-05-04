@@ -1,0 +1,66 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="container">
+
+<h1><span class="glyphicon glyphicon-transfer"></span> Dodaj operację bankową</h1>
+
+<div class="row">
+<div class="col-lg-6">
+
+<form class="form-horizontal" action="operations_bank" method="post">{% csrf_token %}
+
+	<!-- WALIDACJA DANYCH -->
+	{% if error_log %}
+	<div class="alert alert-danger" role="alert">
+	{% if "opis" in error_log %}
+	Proszę wpisać opis operacji<br />
+	{% endif %}
+	
+	{% if "kwota" in error_log %}
+	Proszę wprowadzić prawidłową kwotę<br />
+	{% endif %}
+	
+	</div>
+	{% endif %}
+	<!-- KONIEC WALIDACJI -->
+	    
+    <div class="form-group"><label class="control-label col-lg-3">Opis</label>
+        <div class="col-lg-9"><input type="text" class="form-control" name="opis"></div>
+    </div>
+    
+    <div class="form-group"><label class="control-label col-lg-3">Kwota</label>
+        <div class="col-lg-9"><input type="text" class="form-control" name="kwota"></div>
+    </div>
+    
+    <div class="form-group"><label class="control-label col-lg-3">Jednostka</label><div class="col-lg-9">
+            <select class="form-control" name="jednostka">{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}</select>
+    </div></div>
+    
+	<div class="form-group"><label class="control-label col-lg-3">Akcja</label>
+		<div class="col-lg-9"><select class="form-control" name="akcja">
+		<option value="0">Wybierz</option>
+		<option value="uznanie">Uznanie salda jednostki</option>
+		<option value="obciazenie">Obciążenie salda jednostki</option>
+		</select></div>
+	</div>
+    
+    <div class="form-group">
+        <label class="control-label col-lg-3">Etykiety</label>
+        <div class="col-lg-9"><select multiple class="form-control" name="etykiety">
+			{% for et in etykiety %}<option value="{{ et.id }}">{{ et }}</option>{% endfor %}
+		</select></div>
+    </div>
+    
+    <div class="form-group">
+        <div class="col-lg-offset-3 col-lg-9">
+            <button type="submit" class="btn btn-primary">Dodaj</button>
+        </div>
+    </div>
+</form>
+
+
+</div>
+</div>
+
+{% endblock %}

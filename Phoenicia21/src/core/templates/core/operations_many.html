@@ -1,0 +1,119 @@
+{% extends "core/base.html" %}
+{% block content %}
+
+<div class="container">
+
+{% if jednostki_wybrane %}
+<!--  WYSWIETLANIE KOMUNIKATU BLEDU -->
+{% if error_log %}
+<div class="alert alert-danger" role="alert">
+Proszę poprawić błędy w poniższych operacjach:
+</div>
+{% endif %}
+<!-- KONIEC KOMUNIKATU BLEDU -->
+
+<h2><span class="glyphicon glyphicon-pencil"></span> Wprowadź szczegóły operacji:</h2>
+<h3>Typ operacji: {% if jednostka_beneficjent %}Transfer na rzecz {{ jednostka_beneficjent }} {% else %}Bankowa {% endif %}</h3>
+<h3>Dodane etykiety: {% for ety_wyb in etykiety_wybrane %} {{ ety_wyb }} {% endfor %}</h3>
+	<!-- Table -->
+	<table class="table">
+	<th>Jedostka</th>
+	<th>Kwota</th>
+	<th>Opis</th>
+	<form class="form-inline" role="form" action="operations_many" method="post">{% csrf_token %}
+	
+	{% for jed_wyb in jednostki_wybrane %}
+	<tr>
+	<input type='hidden' name="jednostki_wybrane" value="{{ jed_wyb.id }}" />
+	<td>{{ jed_wyb.nazwa }}</td>
+	<td><input type="text" class="form-control" name="kwota" value="{{ kwota }}"></td>
+	<td><input type="text" class="form-control" name="opis" value="{{ opis }}"></td>
+	</tr>
+	{% endfor %}
+	
+	{% for ety_wyb in etykiety_wybrane %}
+  	<input type='hidden' name="etykiety_wybrane" value="{{ ety_wyb.id }}" />
+  	{% endfor %}
+  	<input type='hidden' name="jednostka_beneficjent" value="{% if jednostka_beneficjent %}{{ jednostka_beneficjent.id }}{% else %}0{% endif %}" />
+  	<input type='hidden' name="akcja" value="{{ akcja }}" />
+	
+	</table>
+	<div class="form-group">
+		<div class="col-lg-2"><button type="submit" class="btn btn-primary">Zatwierdź</button></div>
+	</div>
+	</form>
+
+{% else %}
+<h1><span class="glyphicon glyphicon-transfer"></span> Dodaj wiele operacji</h1>
+	<form class="form-horizontal" action="operations_many" method="post">{% csrf_token %}
+	<h3>Wybierz jednostki:</h3>
+	    <div class="form-group">
+	        <div class="col-lg-6"><select multiple size="{{ pokaz_jednostki }}" class="form-control" name="jednostki">
+	        	<option value="WSZ">Wszystkie</option>
+	        	<option value="PDS">Wszystkie podstawowe</option>
+	        	<option value="NPD">Wszystkie niepodstawowe</option>
+	        	<option value="SZP">Wszystkie szczepy</option>
+	        	<option value="ZSH">Wszystkie zespoły hufcowe</option>
+				{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+			</select></div>
+	    </div>
+	<h3>Typ operacji:</h3>
+		<button id="transfer" class="btn btn-success">Transfer</button> <button id="bankowa" class="btn btn-default">Bankowa</button>
+		<div id="wybor_beneficjenta_div" class="form-group">
+	        <label class="control-label col-lg-2">Odbiorca transferów</label>
+	        <div class="col-lg-4"><select id="wybor_beneficjenta_select" class="form-control" name="jednostka_beneficjent">
+	        	<option value="0">Wybierz jednostkę</option>
+				{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+			</select></div>
+	    </div>
+		<div id="wybor_akcji" hidden class="form-group"><label class="control-label col-lg-2">Akcja</label>
+			<div class="col-lg-4"><select class="form-control" name="akcja">
+			<option value="0">Wybierz</option>
+			<option value="uznanie">Uznanie salda jednostki</option>
+			<option value="obciazenie">Obciążenie salda jednostki</option>
+			</select></div>
+		</div>
+	<h3>Wartości:</h3>
+	    <div class="form-group">
+	        <label class="control-label col-lg-2">Domyślna kwota</label>
+	        <div class="col-lg-4"><input type="text" class="form-control" name="kwota"></div>
+	    </div>
+	    <div class="form-group">
+	        <label class="control-label col-lg-2">Domyślny opis</label>
+	        <div class="col-lg-4"><input type="text" class="form-control" name="opis"></div>
+	    </div>
+	    <div class="form-group">
+	        <label class="control-label col-lg-2">Etykiety</label>
+	        <div class="col-lg-4"><select multiple class="form-control" name="etykiety">
+				{% for et in etykiety %}<option value="{{ et.id }}">{{ et }}</option>{% endfor %}
+			</select></div>
+	    </div>
+	    	    		
+	    <div class="form-group">
+	        <div class="col-lg-2"><button type="submit" class="btn btn-primary">Dalej</button></div>
+	    </div>	
+	</form>
+{% endif %}	
+
+</div>
+
+<script>
+$( "#transfer" ).click(function( event ) {
+	event.preventDefault();
+	$( "#wybor_beneficjenta_div" ).show();
+	$( "#wybor_akcji" ).hide();
+	$( this ).addClass("btn-success").removeClass("btn-default");
+	$( "#bankowa" ).addClass("btn-default").removeClass("btn-success");
+	});
+
+$( "#bankowa" ).click(function( event ) {
+ 	event.preventDefault();
+ 	$( "#wybor_akcji" ).show();
+  	$( "#wybor_beneficjenta_div" ).hide();
+  	$( "#wybor_beneficjenta_div option[value='0']").prop('selected', true);
+  	$( this ).addClass("btn-success").removeClass("btn-default");
+  	$( "#transfer" ).addClass("btn-default").removeClass("btn-success");
+	});
+</script>
+
+{% endblock %}

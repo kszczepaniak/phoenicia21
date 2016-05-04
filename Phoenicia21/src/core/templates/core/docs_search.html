@@ -1,0 +1,301 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="col-lg-12">
+
+{% if dokumenty or default %}
+<!-- WYSZUKIWANIE -->
+
+<div class="panel-group" id="search">
+  <div class="panel panel-default">
+  
+    <div class="panel-heading"><h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#search" href="#collapseOne"><span class="glyphicon glyphicon-search"></span> Wyszukaj</a>
+    </h4></div>
+    
+    <!-- OBSLUGA BLEDOW W WYSZUKIWANIU -->
+    {% if error_log or default %}
+ 	<div id="collapseOne" class="panel-collapse collapse in">
+      <div class="panel-body">
+      {% if error_log %}
+      <div class="alert alert-danger" role="alert">Proszę wpisać datę w formacie RRRR-MM-DD</div>
+      {% endif %}
+    {% else %}
+    <div id="collapseOne" class="panel-collapse collapse">
+      <div class="panel-body">
+    {% endif %}
+    <!-- KONIEC OBSLUGI -->
+      
+        <form class="form-horizontal" action="docs_search" method="post">{% csrf_token %}
+		<div class="col-lg-6">        
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Jednostka</label>
+			<div class="col-lg-3"><select class="form-control" name="jednostka">
+			{% if request.user.is_staff or request.user.is_admin %}
+   			<option value="0">Wybierz jednostkę</option>
+   			{% endif %}
+				{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+			</select></div>
+		</div>
+
+		<div class="form-group">
+			<label class="control-label col-lg-2">Opis</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="opis"></div>
+		</div>
+    
+		<div class="form-group">
+			<label class="control-label col-lg-2">Typ dokumentu</label>
+			<div class="col-lg-3"><select class="form-control" name="typ">
+				<option value="0">----</option>
+				{% for id, value in typy_dokumentow %}<option value="{{ id }}">{{ value }}</option>{% endfor %}
+			</select></div>
+		</div>
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Numer</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="numer"></div>
+		</div>
+		
+		<td><div class="form-group">
+			<label class="control-label col-lg-2">Etykiety</label>
+			<div class="col-lg-3"><select multiple class="form-control" name="etykieta">
+  				{% for ety in etykiety %}<option value="{{ ety.id }}">{{ ety }}</option>{% endfor %}
+  			</select></div></td>
+  		</div>
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Data dokumentu</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="data_dokumentu_start"></div>
+			<label class="control-label col-lg-1">do</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="data_dokumentu_stop" value="{{ today|date:"Y-m-d" }}"></div>
+		</div>
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Data księgowania</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="data_ksiegowania_start"></div>
+			<label class="control-label col-lg-1">do</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="data_ksiegowania_stop" value="{{ today|date:"Y-m-d" }}"></div>
+		</div>
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Kwota</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="kwota_start"></div>
+			<label class="control-label col-lg-1">do</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="kwota_stop"></div>
+		</div>
+        
+        <div class="form-group">
+        	<div class="col-lg-offset-1 col-lg-9">
+            <button type="submit" class="btn btn-primary" name="search">Szukaj</button>
+    		</div>
+    	</div>
+    	</div> 
+  		</form>
+  		
+      </div>
+    </div>
+  </div></div>
+  
+<!-- KONIEC WYSZUKIWANIA -->
+{% endif %}
+
+<!-- WYSWIETLANIE DOKUMENTOW -->
+<div class="panel panel-default">
+
+{% if dokumenty %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Podgląd danych </h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="docs_search" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+      {% if request.user.is_staff or request.user.is_admin %}<th></th>{% endif %}
+	  <th>Data dokumentu</th>
+	  <th>Data księgowania</th>
+	  <th>Typ</th>
+	  <th>Numer</th>
+	  <th>Opis</th>
+	  <th>Wpływ</th>
+	  <th>Wydatek</th>
+	  <th>Etykiety</th>
+	  <th>Jednostka</th>
+	  
+  </tr></thead>
+  
+  <tbody>
+  
+  {% for dok in dokumenty %}
+  <tr>
+  {% if request.user.is_staff or request.user.is_admin %}
+  <td><input type="checkbox" name="pick" value="{{ dok.id }}"></td>
+  {% endif %}
+  <td>{{ dok.data_dokumentu|date:"Y-m-d" }}</td>
+  <td>{{ dok.data_ksiegowania|date:"Y-m-d" }}</td>
+  <td>{{ dok.get_typ_display }}</td>
+  <td>{{ dok.numer }}</td>
+  <td>{{ dok.opis }}</td>
+  <td>{{ dok.wplyw }}</td>
+  <td>{{ dok.wydatek }}</td>
+  <td>{% for ety in dok.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ dok.jednostka }}</td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </div>
+      <div class="form-group">
+      <div class="col-lg-9">
+      		{% if request.user.is_staff or request.user.is_admin %}
+            <button type="submit" class="btn btn-primary" name="edit">Edytuj</button>
+            <button type="submit" class="btn btn-primary" name="delete">Usuń</button>
+            <button type="submit" class="btn btn-primary" name="add_to_report">Dodaj do raportu</button>
+            {% endif %}
+    </div></div>
+  </form>  
+
+<!-- EDYCJA DOKUMENTOW -->
+
+{% elif edytowane_dokumenty %}
+ 
+ <div class="panel-heading"><h3><span class="glyphicon glyphicon-pencil"></span> Edycja danych</h3></div>
+ {%  if error_log %}
+ <div class="alert alert-danger " role="alert">Proszę poprawić dane w poniższych dokumentach:</div>
+ {% endif %}
+ 
+ <!-- Table -->
+  <table class="table">
+  <th>Data dokumentu</th>
+  <th>Typ</th>
+  <th>Numer</th>
+  <th>Opis</th>
+  <th>Wpływ</th>
+  <th>Wydatek</th>
+  <th>Etykiety</th>
+  <th>Jednostka</th>
+  
+  <form class="form-inline" role="form" action="docs_search" method="post">{% csrf_token %}
+  {% for dok in edytowane_dokumenty %} 
+  <tr>
+  <input type='hidden' name="pick" value="{{ dok.id }}" />
+  <td><div class="form-group"><input type="date" class="form-control" name="data_dokumentu" value="{{ dok.data_dokumentu|date:"Y-m-d" }}"></div></td>
+  <td><div class="form-group"><select class="form-control" name="typ">
+  {% for id, value in typy_dokumentow %}<option value="{{ id }}"{% if id == dok.typ %} selected="selected" {% endif %}>{{ value }}</option>{% endfor %}
+  </select></div></td>
+  <td><div class="form-group"><input type="text" class="form-control" name="numer" value="{{ dok.numer }}"></div></td>  
+  <td><div class="form-group"><input type="text" class="form-control" name="opis" value="{{ dok.opis }}"></div></td>
+  <td><div class="form-group"><input type="text" class="form-control" name="wplyw" value="{{ dok.wplyw }}"></div></td>
+  <td><div class="form-group"><input type="text" class="form-control" name="wydatek" value="{{ dok.wydatek }}"></div></td>
+  <td><div class="form-group"><select multiple class="form-control" name="etykiety{{dok.id}}">
+  {% for ety in etykiety %}<option value="{{ ety.id }}" {% if ety in dok.etykiety.all %} selected="selected" {% endif %}>{{ ety }}</option>{% endfor %}
+  </select></div></td>
+  <td><div class="form-group"><select class="form-control" name="jednostka">
+  {% for jed in jednostki %}<option value="{{ jed.id }}" {% if jed == dok.jednostka %} selected="selected" {% endif %}>{{ jed }}</option>{% endfor %}
+  </select></div></td>
+  </tr>
+  {% endfor %}
+  </table>
+  </div>  
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="change">Zmień</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+  
+<!-- USUWANIE DOKUMENTOW -->
+
+{% elif usuwane_dokumenty %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-trash"></span> Zostaną usunięte dokumenty:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th>Data dokumentu</th>
+  <th>Data księgowania</th>
+  <th>Typ</th>
+  <th>Numer</th>
+  <th>Opis</th>
+  <th>Wpływ</th>
+  <th>Wydatek</th>
+  <th>Etykiety</th>
+  <th>Jednostka</th>
+  
+  <form class="form-inline" role="form" action="docs_search" method="post">{% csrf_token %}
+  
+  {% for dok in usuwane_dokumenty %}
+  <tr>
+  <input type='hidden' name="pick" value="{{ dok.id }}" />
+  <td>{{ dok.data_dokumentu|date:"Y-m-d" }}</td>
+  <td>{{ dok.data_ksiegowania|date:"Y-m-d" }}</td>
+  <td>{{ dok.get_typ_display }}</td>
+  <td>{{ dok.numer }}</td>
+  <td>{{ dok.opis }}</td>
+  <td>{{ dok.wplyw }}</td>
+  <td>{{ dok.wydatek }}</td>
+  <td>{% for ety in dok.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ dok.jednostka }}</td>
+  </tr>
+  {% endfor %}
+  
+  </table>
+  </div>
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="del_confirm">Potwierdź</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+
+<!-- DODAWANIE DOKUMENTOW DO RAPORTU -->
+
+{% elif dokumenty_do_dodania %}
+
+<div class="panel-heading"><h3><span class="glyphicon glyphicon-paperclip"></span> Wybierz raport:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th></th>
+  <th>Miesiąc</th>
+  <th>Rok</th>
+  <th>Saldo początkowe</th>
+  <th>Saldo końcowe</th>
+  <th>Pierwszy numer</th>
+  <th>Ostatni numer</th>
+  <th>Status</th>
+  
+  <form class="form-inline" role="form" action="docs_search" method="post">{% csrf_token %}
+  
+  {% for raport in raporty %}
+  <tr>
+  <td><input type='radio' name="raport" value="{{ raport.id }}" /></td>
+  <td>{{ raport.miesiac }}</td>
+  <td>{{ raport.rok }}</td>
+  <td>{{ raport.saldo_start }}</td>
+  <td>{{ raport.saldo_stop }}</td>
+  <td>{{ raport.numer_start }}</td>
+  <td>{{ raport.numer_stop }}</td>
+  <td>{{ raport.get_status_display }}</td>
+  </tr>
+  {% endfor %}
+  
+  {% for dok in dokumenty_do_dodania %}
+  <input type='hidden' name="pick" value="{{ dok.id }}" />
+  {% endfor %}
+  
+  </table>
+  </div>
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="add_to_report_confirm">Potwierdź</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+
+{% endif %}
+
+</div>
+
+{% endblock %}

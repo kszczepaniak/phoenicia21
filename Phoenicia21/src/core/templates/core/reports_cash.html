@@ -1,0 +1,136 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="col-lg-9">
+
+{% if not edytowane_dokumenty_raport %}
+  
+<div class="panel-group" id="reports" role="tablist" aria-multiselectable="true">
+  <div class="panel panel-default">
+    <div class="panel-heading" role="tab" id="headingOne"><h4 class="panel-title">
+      <a data-toggle="collapse" data-parent="#reports" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne"><span class="glyphicon glyphicon-plus"></span> Dodaj raport</a>
+    </h4></div>
+    
+    <div id="collapseOne" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+      <div class="panel-body">
+      <form class="form-inline" action="reports_cash" method="post">{% csrf_token %}<div class="col-lg-9">   
+	  <div class="form-group col-lg-offset-1"><label class="control-label">Miesiąc</label><select class="form-control" name="miesiac">
+	  {% for id, value in miesiace %}<option value="{{ id }}">{{ value }}</option>{% endfor %}
+	  </select></div>
+	  <div class="form-group"><label class="control-label">Rok</label><input type="text" class="form-control" name="rok"></div>
+      <div class="form-group"><div class="col-lg-offset-2 col-lg-9"><button type="submit" class="btn btn-primary" name="add">Dodaj</button></div></div>
+    </div></form></div></div>
+  </div>
+  
+  <div class="panel panel-default">
+    <div class="panel-heading" role="tab" id="headingTwo"><h4 class="panel-title">
+      <a class="collapsed" data-toggle="collapse" data-parent="#reports" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo"><span class="glyphicon glyphicon-refresh"></span> Przelicz raporty</a>
+    </h4></div>
+        
+    <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+      <div class="panel-body">
+      <form class="form-inline" action="reports_cash" method="post">{% csrf_token %}<div class="col-lg-9">   
+	  <div class="form-group col-lg-offset-1"><label class="control-label">Od miesiąca</label><select class="form-control" name="miesiac_start">
+	  {% for id, value in miesiace %}<option value="{{ id }}">{{ value }}</option>{% endfor %}
+	  </select></div>
+	  <div class="form-group"><label class="control-label">Rok</label><select class="form-control" name="rok">
+	  {% for rok in lata %}<option value="{{ rok }}">{{ rok }}</option>{% endfor %}
+	  </select></div>
+      <div class="form-group"><div class="col-lg-offset-2 col-lg-9"><button type="submit" class="btn btn-primary" name="recount">Przelicz</button></div></div>
+      </div></form></div></div>
+  </div>
+</div>
+
+<div class="panel panel-default">
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Wykaz raportów kasowych</h3></div>
+  <!-- Table -->
+  <form class="form-horizontal" action="reports_cash" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+	  <th></th>
+	  <th>Miesiąc</th>
+	  <th>Rok</th>
+	  <th>Saldo początkowe</th>
+	  <th>Saldo końcowe</th>
+	  <th>Pierwszy numer</th>
+	  <th>Ostatni numer</th>
+	  <th>Liczba dokumentów</th>
+	  <th>Status</th>
+  </tr></thead>
+
+  <tbody>  
+  {% for raport in raporty %}
+  <tr>
+  <td>
+    <input type="checkbox" name="pick" value="{{ raport.id }}">
+  </td>
+  <td>{{ raport.miesiac }}</td>
+  <td>{{ raport.rok }}</td>
+  <td>{{ raport.saldo_start }}</td>
+  <td>{{ raport.saldo_stop }}</td>
+  <td>{{ raport.numer_start }}</td>
+  <td>{{ raport.numer_stop }}</td>
+  <td>{{ raport.dokument_set.all.count }}</td>
+  <td>{{ raport.get_status_display }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+  </table>
+  </div>
+  <div class="form-group"><div class="col-xs-9">
+            <button type="submit" class="btn btn-primary" name="edit">Edytuj</button>
+            <button type="submit" class="btn btn-primary" name="delete">Usuń</button>
+            <button type="submit" class="btn btn-primary" name="pdf">PDF</button>
+  </div></div>
+  </form>
+  
+<!-- EDYCJA RAPORTU - USUWANIE DOKUMENTOW -->  
+{% else %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list-alt"></span> Dokumenty zawarte w raporcie:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th></th>
+  <th>Data dokumentu</th>
+  <th>Data księgowania</th>
+  <th>Typ</th>
+  <th>Numer</th>
+  <th>Opis</th>
+  <th>Wpływ</th>
+  <th>Wydatek</th>
+  <th>Etykiety</th>
+  <th>Jednostka</th>
+  
+  <form class="form-inline" role="form" action="reports_cash" method="post">{% csrf_token %}
+  
+  {% for dok in edytowane_dokumenty_raport %}
+  <tr>
+  <td>
+    	<input type="checkbox" name="pick" value="{{ dok.id }}">
+  </td>
+  <td>{{ dok.data_dokumentu|date:"Y-m-d" }}</td>
+  <td>{{ dok.data_ksiegowania|date:"Y-m-d" }}</td>
+  <td>{{ dok.get_typ_display }}</td>
+  <td>{{ dok.numer }}</td>
+  <td>{{ dok.opis }}</td>
+  <td>{{ dok.wplyw }}</td>
+  <td>{{ dok.wydatek }}</td>
+  <td>{% for ety in dok.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ dok.jednostka }}</td>
+  </tr>
+  {% endfor %}
+  
+  </table>
+  </div>
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="delete_docs_report">Usuń</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+
+{% endif %}  
+</div>
+
+{% endblock %}

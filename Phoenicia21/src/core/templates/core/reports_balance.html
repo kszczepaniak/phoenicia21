@@ -1,0 +1,37 @@
+{% extends "core/main.html" %}
+{% block content %}
+<div class="col-lg-9">
+
+<div class="panel-group" id="units">
+<div class="panel panel-default">
+
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Zestawienie sald jednostek </h3></div>
+  
+  <!-- Table -->
+  <table id="show_docs" class="table">
+  <thead><tr>
+	  <th>Nazwa</th>
+	  <th>Typ</th>
+	  <th>Saldo</th>
+	  <th>Aktywna</th>
+  </tr></thead>
+  
+  <tbody>
+  
+  {% for jed in jednostki %}
+  <tr>
+  <td>{{ jed.nazwa }}</td>
+  <td>{{ jed.get_typ_jednostki_display }}</td>
+  <td>{{ jed.saldo }}</td>
+  <td>{% if jed.aktywna == True %}Tak{% else %}Nie{% endif %}</td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </div>
+ 
+</div>
+
+
+{% endblock %}

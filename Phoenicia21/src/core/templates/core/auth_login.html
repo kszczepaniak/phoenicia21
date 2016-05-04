@@ -1,0 +1,125 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="container">
+<div class="col-lg-offset-4 col-lg-4">
+
+{% if nieaktywny %}
+<div class="alert alert-danger" role="alert">Twoje konto nie jest aktywne.</div>
+{% endif %}
+{% if niepowodzenie %}
+<div class="alert alert-danger" role="alert">Błędna para login-hasło.</div>
+{% endif %}
+{% if user_create_success %}
+<div class="alert alert-success" role="alert">Użytkownik został utworzony.</div>
+{% endif %}
+
+{% if create %}
+<!-- OBSLUGA BLEDOW W FORMULARZU REJESTRACJI -->
+{% if error_log %}
+	<div class="alert alert-danger" role="alert">
+	
+	{% if "haslo" in error_log %}
+	Hasło i powtórzone hasło różnią się.<br />
+	{% endif %}
+	
+	{% if "jednostka" in error_log %}
+	Proszę wybrać jednostkę z listy.<br />
+	{% endif %}
+	
+	{% if "dane_osobowe" in error_log %}
+	Proszę wypełnić wszystkie pola.<br />
+	{% endif %}
+	
+	{% if "nazwa_istnieje" in error_log %}
+	Użytkownik istnieje, proszę wybrać inną nazwę.<br />
+	{% endif %}
+	
+	{% if "email_istnieje" in error_log %}
+	Podany email został już użyty do rejestracji.<br />
+	{% endif %}
+	
+	</div>
+{% endif %}
+
+<form class="form-signin" role="form" action="auth_login" method="post">{% csrf_token %}
+
+   <h2 class="form-signin-heading">Nowy użytkownik</h2>
+   
+   <label class="sr-only">Nazwa</label>
+   	<input type="text" name="nazwa" class="form-control" placeholder="Nazwa" autofocus>
+   	
+   	<label class="sr-only">Imię</label>
+   	<input type="text" name="imie" class="form-control" placeholder="Imię">
+   	
+   	<label class="sr-only">Nazwisko</label>
+   	<input type="text" name="nazwisko" class="form-control" placeholder="Nazwisko">
+   	
+   	<label class="sr-only">E-mail</label>
+   	<input type="text" name="email" class="form-control" placeholder="E-mail">
+   	
+   	<label class="sr-only">Jednostka podstawowa</label>
+   	<select class="form-control" name="jednostka">
+   		<option value="0">Wybierz jednostkę</option>{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+	</select>
+   	
+   	<br />
+   <label class="sr-only">Hasło</label>
+   	<input type="password" name="haslo" class="form-control" placeholder="Hasło" >
+   	
+   <label class="sr-only">Powtórz Hasło</label>
+   	<input type="password" name="powtorz_haslo" class="form-control" placeholder="Powtórz hasło" >
+   <br />	
+   <button class="btn btn-lg btn-primary btn-block" type="submit" name="create_new">Utwórz</button>
+   
+ </form>
+ 
+ <!-- Button trigger modal -->
+ <br />
+  <a href="#polityka_prywatnosci" data-toggle="modal">
+  Polityka prywatności
+  </a>
+
+  <!-- Modal -->
+  <div class="modal fade" id="polityka_prywatnosci" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="myModalLabel">Polityka prywatności</h4>
+        </div>
+        <div class="modal-body">
+        1. Podawane przez Ciebie dane pomagają zidentyfikować do kogo trzeba się zwracać z pytaniami (np. termin rozliczenia zaliczki, watpliwość na fakturze, operacje na saldzie jednostki). <br />
+        2. Wgląd do podawanych przez Ciebie danych mają tylko administratorzy systemu (w tej chwili tylko skarbnik, w przyszłości być może reszta członków Zespołu Finansowego). <br />
+        3. System zbiera dodatkowo informację o dacie i godzinie ostatniego logowania: pomaga to zidentyfikować "martwe" konta. <br />
+        4. W przypadku dodawania danych do systemu (faktury, zmiany na saldach) system może również zbierać informację kto wykonał daną operację. Taka informacja pozwala dotrzeć do tej osoby w celu wyjaśnienia
+        potencjalnych wątpliwości. <br />
+        5. Żadne z podawanych przez użytkownika lub zbieranych przez system danych nie jest udostępniane podmiotom trzecim. Serwer przechowujący te dane znajduje się na terytorium RP.<br />  
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Zamknij</button>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+
+{% else %}
+
+ <form class="form-signin" role="form" action="auth_login" method="post">{% csrf_token %}
+   <h2 class="form-signin-heading">Logowanie</h2>
+   <label class="sr-only">Użytkownik</label>
+   	<input type="text" name="nazwa" class="form-control" placeholder="Użytkownik" autofocus>
+   <label class="sr-only">Hasło</label>
+   	<input type="password" name="haslo" class="form-control" placeholder="Hasło" >
+   <button class="btn btn-lg btn-primary btn-block" type="submit" name="login">Zaloguj</button>
+   <button class="btn btn-lg btn-primary btn-block" type="submit" name="create_user">Utwórz użytkownika</button>
+   <a href="restore_password">Nie pamiętam hasła</a>
+ </form>
+
+{% endif %}
+
+</div>
+</div> <!-- /container -->
+
+{% endblock %}

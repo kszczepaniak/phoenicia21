@@ -1,0 +1,261 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="col-lg-12">
+
+{% if operacje or default %}
+<!-- WYSZUKIWANIE -->
+
+<div class="panel-group" id="search">
+  <div class="panel panel-default">
+  
+    <div class="panel-heading"><h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#search" href="#collapseOne"><span class="glyphicon glyphicon-search"></span> Wyszukaj</a>
+    </h4></div>
+    
+    <!-- OBSLUGA BLEDOW W WYSZUKIWANIU -->
+    {% if error_log or default %}
+ 	<div id="collapseOne" class="panel-collapse collapse in">
+      <div class="panel-body">
+      {% if error_log %}
+      <div class="alert alert-danger" role="alert">Proszę wpisać datę w formacie RRRR-MM-DD</div>
+      {% endif %}
+    {% else %}
+    <div id="collapseOne" class="panel-collapse collapse">
+      <div class="panel-body">
+    {% endif %}
+    <!-- KONIEC OBSLUGI -->
+      
+        <form class="form-horizontal" action="operations_view" method="post">{% csrf_token %}
+		<div class="col-lg-6">        
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Jednostka</label>
+			<div class="col-lg-3"><select class="form-control" name="jednostka">
+			{% if request.user.is_staff or request.user.is_admin %}
+   			<option value="0">Wybierz jednostkę</option>
+   			{% endif %}
+				{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+			</select></div>
+		</div>
+
+		<div class="form-group">
+			<label class="control-label col-lg-2">Opis</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="opis"></div>
+		</div>
+    
+		<div class="form-group">
+			<label class="control-label col-lg-2">Typ operacji</label>
+			<div class="col-lg-3"><select class="form-control" name="typ">
+				<option value="0">----</option>
+				{% for id, value in typy_operacji %}<option value="{{ id }}">{{ value }}</option>{% endfor %}
+			</select></div>
+		</div>
+		
+		<td><div class="form-group">
+			<label class="control-label col-lg-2">Etykiety</label>
+			<div class="col-lg-3"><select multiple class="form-control" name="etykieta">
+  				{% for ety in etykiety %}<option value="{{ ety.id }}">{{ ety }}</option>{% endfor %}
+  			</select></div></td>
+  		</div>
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Data dokumentu</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="data_operacji_start"></div>
+			<label class="control-label col-lg-1">do</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="data_operacji_stop" value="{{ today|date:"Y-m-d" }}"></div>
+		</div>
+		
+		<div class="form-group">
+			<label class="control-label col-lg-2">Kwota</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="kwota_start"></div>
+			<label class="control-label col-lg-1">do</label>
+			<div class="col-lg-3"><input type="text" class="form-control" name="kwota_stop"></div>
+		</div>
+        
+        <div class="form-group">
+        	<div class="col-lg-offset-1 col-lg-9">
+            <button type="submit" class="btn btn-primary" name="search">Szukaj</button>
+    		</div>
+    	</div>
+    	</div> 
+  		</form>
+  		
+      </div>
+    </div>
+  </div></div>
+  
+<!-- KONIEC WYSZUKIWANIA -->
+{% endif %}
+
+<div class="panel panel-default">
+
+<!-- PODGLAD OPERACJI -->
+
+{% if operacje %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Podgląd danych </h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="operations_view" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+      {% if request.user.is_staff or request.user.is_admin %}<th></th>{% endif %}
+	  <th>Data operacji</th>
+	  <th>Typ operacji</th>
+	  <th>Opis</th>
+	  <th>Etykiety</th>
+	  <th>Kwota</th>
+	  <th>Jednostka wyjściowa</th>
+	  <th>Jednostka wejściowa</th>
+  </tr></thead>
+  
+  <tbody>
+  {% for op in operacje %}
+  <tr>
+  {% if request.user.is_staff or request.user.is_admin %}<td><input type="checkbox" name="pick" value="{{ op.id }}"></td>{% endif %}
+  <td>{{ op.data_operacji|date:"Y-m-d" }}</td>
+  <td>{{ op.get_typ_operacji_display }}</td>
+  <td>{{ op.opis }}</td>
+  <td>{% for ety in op.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ op.kwota }}</td>
+  <td>{{ op.jednostka_zrodlowa }}</td>
+  <td>{{ op.jednostka_docelowa }}</td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </div>
+      {% if request.user.is_staff or request.user.is_admin %}
+      <div class="form-group">
+      <div class="col-xs-9">
+            <button type="submit" class="btn btn-primary" name="edit">Edytuj</button>
+            <button type="submit" class="btn btn-primary" name="delete">Usuń</button>
+    </div></div>
+    {% endif %}
+  </form>  
+
+<!-- DODAC KOD EDYCJI DOKUMENTOW -->
+
+{% elif documents_edit %}
+ 
+ <div class="panel-heading"><h3><span class="glyphicon glyphicon-pencil"></span> Edycja danych</h3></div>
+ {%  if error_log %}
+ <div class="alert alert-danger " role="alert">Proszę poprawić dane w poniższych dokumentach:</div>
+ {% endif %}
+ 
+ <!-- Table -->
+  <table class="table">
+  <th>Data dokumentu</th>
+  <th>Typ</th>
+  <th>Numer</th>
+  <th>Tytuł</th>
+  <th>1%</th>
+  <th>Wpływ</th>
+  <th>Wydatek</th>
+  <th>Jednostka</th>
+
+  
+  <form class="form-inline" role="form" action="docs_view" method="post">{% csrf_token %}
+  
+  {% for doc in documents_edit %} 
+  <tr>
+  <input type='hidden' name="pick" value="{{ doc.id }}" />
+  <td><div class="form-group">
+  		<input type="date" class="form-control" id="id_doc_date" name="doc_date" value="{{ doc.doc_date|date:"Y-m-d" }}"></div>
+  </td>
+  
+  <td><div class="form-group">
+	<select class="form-control" id="id_type" name="type">
+		{% for type in types %}
+			<option value="{{ type.id }}" {% if type == doc.type %} selected="selected" {% endif %}>{{ type }}</option>
+		{% endfor %}
+	</select></div>
+  </td>
+  
+  <td><div class="form-group">
+  		<input type="text" class="form-control" id="id_number" name="number" value="{{ doc.number }}"></div>
+  </td>  
+
+  <td><div class="form-group">
+  		<input type="text" class="form-control" id="id_title" name="title" value="{{ doc.title }}"></div>
+  </td>
+    
+  <td> 	
+  	<input type="checkbox" class="form-control" id="id_one_percent" name="one_percent{{ doc.id }}" {% if doc.one_percent %} checked="checked" {% endif %}>
+  </td>
+  
+  <td><div class="form-group">
+  		<input type="text" class="form-control" id="id_credit" name="credit" value="{{ doc.credit }}"></div>
+  </td>
+  
+  <td><div class="form-group">
+  		<input type="text" class="form-control" id="id_debit" name="debit" value="{{ doc.debit }}"></div>
+  </td>
+  
+  <td><div class="form-group">
+	<select class="form-control" id="id_unit" name="unit">
+		{% for unit in units %}
+			<option value="{{ unit.id }}" {% if unit == doc.unit %} selected="selected" {% endif %}>{{ unit }}</option>
+		{% endfor %}
+	</select></div>
+  </td>
+  
+  </tr>
+  {% endfor %}
+  
+  </table>
+  </div>  
+  <div class="form-group">
+  <div class="col-xs-9">
+          <button type="submit" class="btn btn-primary" name="change">Zmień</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  
+  </form>
+  
+<!-- USUWANIE OPERACJI -->
+
+{% elif usuwane_operacje %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-trash"></span> Zostaną usunięte operacje:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th>Data operacji</th>
+  <th>Typ operacji</th>
+  <th>Opis</th>
+  <th>Etykiety</th>
+  <th>Kwota</th>
+  <th>Jednostka wyjściowa</th>
+  <th>Jednostka wejściowa</th>
+  
+  <form class="form-inline" role="form" action="operations_view" method="post">{% csrf_token %}
+  
+  {% for op in usuwane_operacje %}
+  <tr>
+  <input type='hidden' name="pick" value="{{ op.id }}" />
+  <td>{{ op.data_operacji|date:"Y-m-d" }}</td>
+  <td>{{ op.get_typ_operacji_display }}</td>
+  <td>{{ op.opis }}</td>
+  <td>{% for ety in op.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ op.kwota }}</td>
+  <td>{{ op.jednostka_zrodlowa }}</td>
+  <td>{{ op.jednostka_docelowa }}</td>
+  </tr>
+  {% endfor %}
+  
+  </table>
+  </div>
+  <div class="form-group"><div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="del_confirm">Potwierdź</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+
+  </form>
+
+{% endif %}
+</div></div>
+
+{% endblock %}

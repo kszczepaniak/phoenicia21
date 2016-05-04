@@ -1,0 +1,176 @@
+{% extends "core/main.html" %}
+{% block content %}
+<div class="col-lg-9">
+
+<div class="panel-group" id="add">
+
+<!-- WYSWIETLANIE DOKUMENTOW DO EDYCJI -->
+{% if edytowani_uzytkownicy %}
+
+  <div class="panel panel-default">
+  
+  <div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#search" href="#collapseOne"><span class="glyphicon glyphicon-pencil"></span> Edytuj użytkowników</a></h4></div>
+          
+  <!-- Table -->
+  <table class="table">
+  <th>Nazwa</th>
+  <th>Imię</th>
+  <th>Nazwisko</th>
+  <th>Email</th>
+  <th>Admin</th>
+  <th>ZFH</th>
+  <th>Aktywny</th>
+  <th>Jednostki</th>
+  <th>Ostatnie logowanie</th>
+  
+  <form class="form-inline" role="form" action="admin_users" method="post">{% csrf_token %}
+  {% for uzyt in edytowani_uzytkownicy %} 
+  <tr>
+  <input type='hidden' name="pick" value="{{ uzyt.id }}" />
+  <td>{{ uzyt.login }}</td>
+  <td>{{ uzyt.imie }}</td>
+  <td>{{ uzyt.nazwisko }}</td>
+  <td>{{ uzyt.email }}</td>
+  <td><div class="form-group"><select class="form-control" name="admin">
+  <option value="1" {% if uzyt.is_admin %} selected="selected" {% endif %}>Tak</option>
+  <option value="0" {% if not uzyt.is_admin %} selected="selected" {% endif %}>Nie</option>
+  </select></div></td>
+  <td><div class="form-group"><select class="form-control" name="staff">
+  <option value="1" {% if uzyt.is_staff %} selected="selected" {% endif %}>Tak</option>
+  <option value="0" {% if not uzyt.is_staff %} selected="selected" {% endif %}>Nie</option>
+  </select></div></td>
+  <td><div class="form-group"><select class="form-control" name="aktywny">
+  <option value="1" {% if uzyt.is_active %} selected="selected" {% endif %}>Tak</option>
+  <option value="0" {% if not uzyt.is_active %} selected="selected" {% endif %}>Nie</option>
+  </select></div></td>
+  <td>{% for jed in uzyt.jednostka.all %} {{ jed }} </br> {% endfor %}</td>
+  <td>{{ uzyt.last_login }}</td>
+  </tr>
+  {% endfor %}
+  </table>
+  </div><br />  
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="change">Zmień</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+
+<!-- KONIEC WYSWIETLANIA DO EDYCJI -->
+
+{% elif uzytkownicy_do_jednostek %}
+<!-- PRZYDZIELANIE JEDNOSTEK DO UZYTKOWNIKOW -->
+
+<form class="form-signin" role="form" action="admin_users" method="post">{% csrf_token %}
+<div class="alert alert-info" role="alert">Każdy z następujących użytkowników otrzyma dostęp do wybranych jednostek:<br />
+{% for uzyt in uzytkownicy_do_jednostek %} {{ uzyt }} ( {{ uzyt.imie }} {{ uzyt.nazwisko }} ), przypisane jednostki: {% for jed in uzyt.jednostka.all %} {{ jed }} {% endfor %}<br />
+<input type='hidden' name="users" value="{{ uzyt.id }}" /> 
+{% endfor %}
+</div>
+
+<div class="col-lg-4">
+   <h2 class="form-signin-heading">Wybierz jednostki</h2>
+
+   	<select class="form-control" name="jednostka_1">
+   		<option value="0">----</option>{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+	</select>
+	<select class="form-control" name="jednostka_2">
+   		<option value="0">----</option>{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+	</select>
+   	<select class="form-control" name="jednostka_3">
+   		<option value="0">----</option>{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+	</select>
+   	<select class="form-control" name="jednostka_4">
+   		<option value="0">----</option>{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+	</select>		
+
+   <br />	
+   <button class="btn btn-primary" type="submit" name="assign_units">Zatwierdź</button>
+   <button class="btn btn-primary" type="submit" name="cancel">Anuluj</button>
+   
+ </form>
+ </div>
+
+<!-- KONIEC PRZYDZIELANIA JEDNOSTEK DO UZYTKOWNIKOW -->
+
+{% elif uzytkownik_odpiecie_jednostek %}
+
+<!-- ODPINIANIE JEDNOSTEK OD UZYTKOWNIKOW -->
+
+<form class="form-signin" role="form" action="admin_users" method="post">{% csrf_token %}
+<input type='hidden' name="uzytkownik" value="{{ uzytkownik_odpiecie_jednostek.id }}" />
+<div class="alert alert-info" role="alert">Proszę zaznaczyć jednostki, które mają być odpiętę od danego użytkownika.</div>
+
+<h2 class="form-signin-heading">Jednostki przypisane do użytkownika {{ uzytkownik_odpiecie_jednostek.imie }} {{ uzytkownik_odpiecie_jednostek.nazwisko }}</h2>
+<div class="col-lg-4">
+
+   <div class="form-group"><select multiple class="form-control" name="jednostki">
+   {% for jed in uzytkownik_odpiecie_jednostek.jednostka.all %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+   </select></div>		
+
+   <br />	
+   <button class="btn btn-primary" type="submit" name="deassign_units">Zatwierdź</button>
+   <button class="btn btn-primary" type="submit" name="cancel">Anuluj</button>
+   
+ </form>
+ </div>
+
+<!-- KONIEC ODPINIANIA JEDNOSTEK OD UZYTKOWNIKOW -->
+
+{% else %}
+
+<div class="panel panel-default">
+
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Wykaz użytkowników </h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="admin_users" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+  	<th></th>
+  	<th>Nazwa</th>
+  	<th>Imię</th>
+  	<th>Nazwisko</th>
+ 	<th>Email</th>
+  	<th>Admin</th>
+  	<th>ZFH</th>
+  	<th>Aktywny</th>
+  	<th>Jednostki</th>
+  	<th>Ostatnie logowanie</th>
+  </tr></thead>
+  
+  <tbody>
+  
+  {% for uzyt in uzytkownicy %}
+  <tr>
+  <td>
+    	<input type="checkbox" name="pick" value="{{ uzyt.id }}">
+  </td>
+  <td>{{ uzyt.login }}</td>
+  <td>{{ uzyt.imie }}</td>
+  <td>{{ uzyt.nazwisko }}</td>
+  <td>{{ uzyt.email }}</td>
+  <td>{% if uzyt.is_admin == True %}Tak{% else %}Nie{% endif %}</td>
+  <td>{% if uzyt.is_staff == True %}Tak{% else %}Nie{% endif %}</td>
+  <td>{% if uzyt.is_active == True %}Tak{% else %}Nie{% endif %}</td>
+  <td>{% for jed in uzyt.jednostka.all %} {{ jed }} </br> {% endfor %}</td>
+  <td>{{ uzyt.last_login }}</td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </div><br />
+      <div class="form-group">
+      <div class="col-lg-9">
+            <button type="submit" class="btn btn-primary" name="edit">Edytuj</button>
+            <button type="submit" class="btn btn-primary" name="add_units">Dodaj jednostki</button>
+            <button type="submit" class="btn btn-primary" name="remove_units">Usuń jednostki</button>
+    </div></div>
+  
+  </form>  
+  
+</div>
+{% endif %}
+
+{% endblock %}

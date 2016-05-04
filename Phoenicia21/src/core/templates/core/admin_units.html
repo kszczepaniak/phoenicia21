@@ -1,0 +1,148 @@
+{% extends "core/main.html" %}
+{% block content %}
+<div class="col-lg-9">
+
+<div class="panel-group" id="add">
+
+<!-- WYSWIETLANIE DOKUMENTOW DO EDYCJI -->
+{% if edytowane_jednostki %}
+
+  <div class="panel panel-default">
+  
+  <div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#search" href="#collapseOne"><span class="glyphicon glyphicon-pencil"></span> Edytuj jednostki</a></h4></div>
+          
+  <!-- Table -->
+  <table class="table">
+  <th>Nazwa</th>
+  <th>Typ</th>
+  <th>Saldo</th>
+  <th>Aktywna</th>
+  
+  <form class="form-inline" role="form" action="admin_units" method="post">{% csrf_token %}
+  {% for jed in edytowane_jednostki %} 
+  <tr>
+  <input type='hidden' name="pick" value="{{ jed.id }}" />
+  <td><div class="form-group"><input type="text" class="form-control" name="nazwa" value="{{ jed.nazwa }}"></div></td>
+  <td><div class="form-group"><select class="form-control" name="typ_jednostki">
+  {% for id, value in typy_jednostek %}<option value="{{ id }}"{% if id == jed.typ_jednostki %} selected="selected" {% endif %}>{{ value }}</option>{% endfor %}
+  </select></div></td>
+  <td><div class="form-group">{{ jed.saldo }}</div></td>
+  <td><div class="form-group"><select class="form-control" name="aktywna">
+  <option value="1" {% if jed.aktywna %} selected="selected" {% endif %}>Tak</option>
+  <option value="0" {% if not jed.aktywna %} selected="selected" {% endif %}>Nie</option>
+  </select></div></td>
+  </tr>
+  {% endfor %}
+  </table>
+  </div><br />  
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="change">Zmień</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+
+<!-- KONIEC WYSWIETLANIA DO EDYCJI -->
+{% else %}
+
+  <div class="panel panel-default">
+  
+    <div class="panel-heading"><h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#search" href="#collapseOne"><span class="glyphicon glyphicon-plus"></span> Dodaj jednostkę</a>
+    </h4></div>
+    
+    <!-- !!! ZROBIC OBSLUGE BLEDOW -->
+    {% if error_log %}
+ 	<div id="collapseOne" class="panel-collapse collapse in">
+      <div class="panel-body">
+      <div class="alert alert-danger" role="alert">
+	  Proszę wpisać datę w formacie RRRR-MM-DD
+	  </div> 
+      
+    {% else %}
+    <div id="collapseOne" class="panel-collapse collapse">
+      <div class="panel-body">
+    {% endif %}
+    
+    <!-- KONIEC OBSLUGI BLEDOW -->
+      
+<form class="form-horizontal" action="admin_units" method="post">{% csrf_token %}     
+<div class="col-lg-9">   
+		
+<div class="form-group">
+	<label class="control-label col-lg-2">Nazwa</label>
+	<div class="col-lg-3"><input type="text" class="form-control" name="nazwa"></div>
+</div>
+
+<div class="form-group">
+	<label class="control-label col-lg-2">Typ</label>
+	<div class="col-lg-3"><select class="form-control" name="typ_jednostki">
+		{% for id, value in typy_jednostek %}<option value="{{ id }}">{{ value }}</option>{% endfor %}
+	</select></div>
+</div>
+
+<div class="form-group">
+	<label class="control-label col-lg-2">Saldo</label>
+	<div class="col-lg-3"><input type="text" class="form-control" name="saldo"></div>
+</div>
+
+<div class="form-group">
+  	<label class="control-label col-lg-2">Opcje</label>
+      <div class="col-lg-3">
+          <div class="checkbox"><label><input type="checkbox" name="aktywna">Aktywna</label></div>
+      </div>
+</div>
+    
+<div class="form-group">
+    <div class="col-lg-offset-2 col-lg-9"><button type="submit" class="btn btn-primary" name="add">Dodaj</button></div>
+</div>
+
+</div></form>
+
+</div>
+</div>
+</div></div>
+
+<div class="panel panel-default">
+
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Wykaz jednostek </h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="admin_units" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+	  <th></th>
+	  <th>Nazwa</th>
+	  <th>Typ</th>
+	  <th>Saldo</th>
+	  <th>Aktywna</th>
+  </tr></thead>
+  
+  <tbody>
+  
+  {% for jed in jednostki %}
+  <tr>
+  <td>
+    	<input type="checkbox" name="pick" value="{{ jed.id }}">
+  </td>
+  <td>{{ jed.nazwa }}</td>
+  <td>{{ jed.get_typ_jednostki_display }}</td>
+  <td>{{ jed.saldo }}</td>
+  <td>{% if jed.aktywna == True %}Tak{% else %}Nie{% endif %}</td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </div>
+      <div class="form-group">
+      <div class="col-lg-9">
+            <button type="submit" class="btn btn-primary" name="edit">Edytuj</button>
+    </div></div>
+  
+  </form>  
+  
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,165 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	    <meta charset="utf-8">
+	    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	    <meta name="viewport" content="width=device-width, initial-scale=1">
+	    <title>ZFH's Phoenicia 2.1</title>
+	
+	    <!-- Bootstrap -->
+	    <link href="{% static 'bootstrap-3.2.0-dist/css/bootstrap.min.css' %}" rel="stylesheet">
+	
+	    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+	    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+	    <!--[if lt IE 9]>
+	      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+	      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+	    <![endif]-->
+	    
+	    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+	    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	    <!-- Include all compiled plugins (below), or include individual files as needed -->
+	    <script src="{% static 'bootstrap-3.2.0-dist/js/bootstrap.min.js' %}"></script>
+	
+	    <!-- jQuery-ui ACTIVATE WHEN NEEDED 
+	    <script src="{% static 'database/bootstrap-3.2.0-dist/js/jquery-ui.min.js' %}"></script>
+	    <link href="{% static 'database/bootstrap-3.2.0-dist/css/jquery-ui.min.css' %}" rel="stylesheet">
+	    -->
+	    
+	    <!-- DataTables -->
+		<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.js"></script>  
+		<!-- DataTables CSS (Bootstrap) -->
+		<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/plug-ins/a5734b29083/integration/bootstrap/3/dataTables.bootstrap.css">
+		<!-- DataTables JS (Bootstrap) -->
+		<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/plug-ins/a5734b29083/integration/bootstrap/3/dataTables.bootstrap.js"></script> 
+		
+		<!-- skrypt z ustawieniami dla datatables -->
+	    <script>
+		$(document).ready( function () {
+		    $('#show_docs').DataTable( {searching: false, ordering:  false, "lengthChange": false, "iDisplayLength": 15,
+		    	"oLanguage": { "sInfo": "Znaleziono wyników: _TOTAL_ (pokazuję od _START_ do _END_)", 
+		    	      "oPaginate": {
+		    	        "sNext": "Następna", "sPrevious": "Poprzednia"
+		    	      }
+		    	    }
+		    	});
+			} );
+		</script> 
+	  
+		<!-- dzieki temu stylowi pasek menu nie zakrywa tresci strony -->  
+		<style>
+		body 
+		{ padding-top: 70px; }
+		</style>
+	</head>
+	
+	<body>
+  		
+  		<!-- pasek nawigacji: tutaj zmieniac uklad zakladek -->
+		<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+		  <div class="container-fluid">
+		    <!-- Brand and toggle get grouped for better mobile display -->
+		    <div class="navbar-header">
+		      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+		        <span class="sr-only">Toggle navigation</span>
+		        <span class="icon-bar"></span>
+		        <span class="icon-bar"></span>
+		        <span class="icon-bar"></span>
+		      </button>
+		      <a class="navbar-brand" href="main">Phoenicia</a>
+		    </div>
+		
+		    <!-- Collect the nav links, forms, and other content for toggling -->
+		    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+		      <ul class="nav navbar-nav">
+		        
+		        {% if request.user.is_staff or request.user.is_admin %}      
+		        <li class="dropdown">
+		          <a href="docs_view" class="dropdown-toggle" data-toggle="dropdown">Dokumenty <span class="caret"></span></a>
+		          <ul class="dropdown-menu" role="menu">
+		            <li><a href="docs_search">Szukaj</a></li>
+		            <li><a href="docs_add">Dodaj</a></li>
+		            <li><a href="#">Zaliczki</a></li>
+		          </ul>
+		        </li>
+		        
+		        <li class="dropdown">
+		          <a href="docs_view" class="dropdown-toggle" data-toggle="dropdown">Operacje na saldach <span class="caret"></span></a>
+		          <ul class="dropdown-menu" role="menu">
+		            <li><a href="operations_view">Podgląd danych</a></li>
+		            <li class="divider"></li>
+		          	<li><a href="operations_transfer">Transfer</a></li>
+		            <li><a href="operations_bank">Bankowe</a></li>
+		            <li><a href="operations_many">Dodaj wiele</a></li>
+		            
+		          </ul>
+		        </li>
+		        
+		        <li class="dropdown">
+		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Raporty<span class="caret"></span></a>
+		          <ul class="dropdown-menu" role="menu">
+		            <li><a href="reports_balance">Salda</a></li>
+		            <li><a href="reports_cash">Raporty kasowe</a></li>    
+		          </ul>
+		        </li>
+		        
+		        <li><a href="#">Faktury</a></li>
+		        <li><a href="https://docs.google.com/folderview?id=0B4hUkplS1WlNaTRKVzA1TGpoRFU&usp=drive_web&tid=0B9d12whtcnm-YzE4ZTQ4MDktOTAwNy00NTFmLWFmODctYjdjNzYxZWUzYzQy">Materiały</a></li>
+		        
+		        {% if request.user.is_admin %}
+		        <li class="dropdown">
+		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin<span class="caret"></span></a>
+		          <ul class="dropdown-menu" role="menu">
+		            <li><a href="admin_users">Użytkownicy</a></li>
+		            <li><a href="admin_units">Jednostki</a></li>
+		            <li><a href="admin_tags">Etykiety</a></li>
+		            <li><a href="admin_doctitle">Dekrety</a></li>
+		            <li><a href="admin_balance">Salda</a></li>    
+		          </ul>
+		        </li>
+		        {% endif %}
+		        {% else %}
+		        <li class="dropdown">
+		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Podgląd <span class="caret"></span></a>
+		          <ul class="dropdown-menu" role="menu">
+		            <li><a href="docs_search">Dokumenty</a></li>
+		            <li><a href="operations_view">Operacje</a></li>
+		            <li><a href="reports_balance">Salda</a></li>
+		          </ul>
+		        </li>
+		        
+		        <li class="dropdown">
+		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Rejestracja danych <span class="caret"></span></a>
+		          <ul class="dropdown-menu" role="menu">
+		          	<li><a href="docs_add">Dokumenty</a></li>
+		            <li><a href="#">Operacje</a></li>
+		            <li><a href="#">Faktury</a></li>
+		          </ul>
+		        </li>
+				
+				<li><a href="https://docs.google.com/folderview?id=0B4hUkplS1WlNaTRKVzA1TGpoRFU&usp=drive_web&tid=0B9d12whtcnm-YzE4ZTQ4MDktOTAwNy00NTFmLWFmODctYjdjNzYxZWUzYzQy">Materiały</a></li>
+		        {% endif %} <!-- staff navbar end-->
+		      </ul>
+		      
+		      <!-- przyciski i status logowania -->
+		      <ul class="nav navbar-nav navbar-right">
+		      {% if user.is_authenticated %}
+		        <li><a href="profile">Profil</a></li>
+		        <li><a href="auth_logout">Wyloguj</a></li>
+		      {% else %}
+		        <li><a href="auth_login">Zaloguj</a></li>
+		      {% endif %}
+		      </ul>
+		
+		    </div><!-- /.navbar-collapse -->
+		  </div><!-- /.container-fluid -->
+		</nav>
+
+{% block content %}
+
+{% endblock %}
+
+
+	</body>
+</html>

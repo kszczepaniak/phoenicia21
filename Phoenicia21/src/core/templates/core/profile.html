@@ -1,0 +1,63 @@
+{% extends "core/base.html" %}
+{% block content %}
+
+<div class="container">
+
+<h1><span class="glyphicon glyphicon-user"></span> Profil użytkownika {{uzytkownik.login }}</h1>
+<h3 class="form-signin-heading">Imię: {{ uzytkownik.imie }}</h3>
+<h3 class="form-signin-heading">Nazwisko: {{ uzytkownik.nazwisko }}</h3>
+	<div class="row">
+	<div class="col-lg-6">
+	<hr>
+	<h4>Zmiana hasła:</h4>
+	<form class="form-horizontal" action="profile" method="post">{% csrf_token %}
+		<!--  WYSWIETLANIE KOMUNIKATU BLEDU -->
+		{% if error_log %}
+		<div class="alert alert-danger" role="alert">
+		{% if "zle_stare_haslo" in error_log %}
+		Nieprawidłowe stare hasło.<br />
+		{% endif %}
+		
+		{% if "niezgodne_nowe_haslo" in error_log %}
+		Nowe hasło i powtórzone nowe hasło różnią się.<br />
+		{% endif %}
+
+		{% if "krotkie_haslo" in error_log %}
+		Hasło nie może być puste.<br />
+		{% endif %}
+		
+		</div>
+		{% endif %}
+		<!-- KONIEC KOMUNIKATU BLEDU -->
+		<!-- KOMUNIKAT SUKCESU -->
+		{% if sukces %}
+		<div class="alert alert-success" role="alert">
+		Zmiana hasła przebiegła pomyślnie.
+		</div>
+		{% endif %}
+		<!-- KONIEC KOMUNIKATU SUKCESU -->
+		
+	    <div class="form-group">
+	        <label class="control-label col-lg-3">Stare hasło:</label>
+	        <div class="col-lg-9"><input type="password" class="form-control" name="stare_haslo"></div>
+	    </div>
+
+	    <div class="form-group">
+	        <label class="control-label col-lg-3">Nowe hasło:</label>
+	        <div class="col-lg-9"><input type="password" class="form-control" name="nowe_haslo"></div>
+	    </div>
+	 
+	    <div class="form-group">
+	        <label class="control-label col-lg-3">Powtórz nowe hasło:</label>
+	        <div class="col-lg-9"><input type="password" class="form-control" name="nowe_haslo_powtorz"></div>
+	    </div>	 
+	 
+	    <div class="form-group">
+	        <div class="col-lg-offset-3 col-lg-9"><button type="submit" class="btn btn-primary" name='zmien'>Zmień</button></div>
+	    </div>
+	</form>
+	</div></div>
+
+</div>
+
+{% endblock %}
