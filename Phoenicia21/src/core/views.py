@@ -15,7 +15,10 @@ from django.http import HttpResponse
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab import rl_config
 
+# email uzywany przez system do rozsylania wiadomosci
 EMAIL_SYSTEMU = 'kszczepaniak@gmx.com'
+# na ten email przychodza informaje z systemu takie jak o rejestracji nowego uzytkownika
+EMAIL_ADMINA  = 'kszczepaniak@gmx.com'
 
 MIESIACE = ((1, u'Stycze\u0144'), (2, 'Luty'), (3, 'Marzec'),
             (4, u'Kwiecie\u0144'), (5, 'Maj'), (6, 'Czerwiec'),
@@ -345,6 +348,13 @@ def auth_login(request):
             user = Uzytkownik.objects.create_user(request.POST['nazwa'], request.POST['haslo'], imie=request.POST['imie'], 
                                             nazwisko=request.POST['nazwisko'], email=request.POST['email'], hufiec=hufiec,
                                             jednostka=request.POST['jednostka'])
+            # wyslij maila z powiadomieniem o nowym uzytkowniku
+            temat = '[ZFH] Utworzono nowego użytkownika'
+            tresc = 'To jest automatyczna wiadomość.\nNa stronie Zespołu Finansowego zarejestrował się nowy użytkownik.\nZaloguj się i aktywuj jego konto.'
+            tresc += '\n\n---\n System Księgowy "Phoenicia"'
+            # ponizsza funkcjonalnosc wymaga skonfigurowanego maila, jezeli testujesz rejestracje uzytkownikow bez skonfigurowanego maila zakomentuj
+            # ! WAZNE: odkomentuj jak skonczysz testowac, inaczej do produkcji moze pojsc wersja bez tej funkcjonalnosci
+            send_mail(temat, tresc, EMAIL_SYSTEMU, [EMAIL_ADMINA], fail_silently=False)
             context['user_create_success'] = 1
     
     if 'login' in request.POST:
@@ -694,8 +704,14 @@ def reports_cash(request):
     
     # usuwanie wybranego raportu kasowego
     if 'delete' in request.POST:
-        # usun powiazania dokumentow do raportu
         raport_id  = request.POST.getlist('pick')[0]
+        raport_del = RaportKasowy.objects.get(id=raport_id)
+        
+        context['usuwany_raport'] = raport_del
+        
+    if 'delete_confirm' in request.POST:
+        # usun powiazania dokumentow do raportu
+        raport_id  = request.POST['usuwany_raport_id']
         raport_del = RaportKasowy.objects.get(id=raport_id)
         dokumenty  = raport_del.dokument_set.all()
         for dok in dokumenty:

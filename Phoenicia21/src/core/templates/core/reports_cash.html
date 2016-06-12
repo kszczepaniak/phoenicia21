@@ -3,7 +3,7 @@
 
 <div class="col-lg-9">
 
-{% if not edytowane_dokumenty_raport %}
+{% if not edytowane_dokumenty_raport and not usuwany_raport %}
   
 <div class="panel-group" id="reports" role="tablist" aria-multiselectable="true">
   <div class="panel panel-default">
@@ -85,7 +85,7 @@
   </form>
   
 <!-- EDYCJA RAPORTU - USUWANIE DOKUMENTOW -->  
-{% else %}
+{% elif edytowane_dokumenty_raport %}
   
   <div class="panel-heading"><h3><span class="glyphicon glyphicon-list-alt"></span> Dokumenty zawarte w raporcie:</h3></div>
   
@@ -129,6 +129,22 @@
           <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
   </div></div>
   </form>
+
+<!-- USUWANIE RAPORTU - POTWIERDZENIE -->
+{% elif usuwany_raport %}
+
+<div class="container">
+
+<div class="alert alert-danger text-center" role="alert"><h2>Uwaga! Nastąpi nieodwracalne usunięcie raportu. Kontynuować?</h2>
+	<h3>Usuwany raport: {{ usuwany_raport.miesiac }}/{{ usuwany_raport.rok }}</h3>
+	
+	<form class="form-inline" role="form" action="reports_cash" method="post">{% csrf_token %}
+	<input type="hidden" name="usuwany_raport_id" value="{{ usuwany_raport.id }}">
+	        <button type="submit" class="btn btn-danger" name="delete_confirm">Tak</button>
+	        <button type="submit" class="btn btn-success" name="cancel">Nie</button>
+	</form>
+	</div>
+</div>
 
 {% endif %}  
 </div>
