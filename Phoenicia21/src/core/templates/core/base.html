@@ -104,7 +104,15 @@
 		          </ul>
 		        </li>
 		        
-		        <li><a href="#">Faktury</a></li>
+		        <li class="dropdown">
+		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Faktury<span class="caret"></span></a>
+		          <ul class="dropdown-menu" role="menu">
+		            <li><a href="invoices">Podgląd</a></li>
+		            <li><a href="invoices">Zgłoś</a></li>
+		            <li><a href="invoices_upload">Zgłoś wiele</a></li>
+		          </ul>
+		        </li>
+		        
 		        <li><a href="https://docs.google.com/folderview?id=0B4hUkplS1WlNaTRKVzA1TGpoRFU&usp=drive_web&tid=0B9d12whtcnm-YzE4ZTQ4MDktOTAwNy00NTFmLWFmODctYjdjNzYxZWUzYzQy">Materiały</a></li>
 		        
 		        {% if request.user.is_admin %}
@@ -115,7 +123,8 @@
 		            <li><a href="admin_units">Jednostki</a></li>
 		            <li><a href="admin_tags">Etykiety</a></li>
 		            <li><a href="admin_doctitle">Dekrety</a></li>
-		            <li><a href="admin_balance">Salda</a></li>    
+		            <li><a href="admin_balance">Salda</a></li>
+		            <li><a href="admin_invoices">Faktury</a></li>    
 		          </ul>
 		        </li>
 		        {% endif %}
@@ -134,7 +143,8 @@
 		          <ul class="dropdown-menu" role="menu">
 		          	<li><a href="docs_add">Dokumenty</a></li>
 		            <li><a href="#">Operacje</a></li>
-		            <li><a href="#">Faktury</a></li>
+		            <li><a href="#">Faktura</a></li>
+		            <li><a href="invoices_upload">Faktury wiele</a></li>
 		          </ul>
 		        </li>
 				

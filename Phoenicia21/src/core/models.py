@@ -189,3 +189,68 @@ class BilansOtwarcia(models.Model):
     rok    = models.IntegerField()
     kwota  = models.DecimalField(max_digits=12, decimal_places=2)
     #hufiec  = models.ForeignKey('Hufiec')
+
+class SposobPlatnosci(models.Model):
+    nazwa       = models.CharField(max_length=50)
+    numer_konta = models.CharField(max_length=40)
+    
+    def __str__(self):
+        return self.nazwa
+
+class NumeracjaFaktur(models.Model):
+    rok           = models.IntegerField()
+    biezacy_numer = models.IntegerField()
+    
+    HAL = 'HAL'
+    HAZ = 'HAZ'
+    ROK = 'ROK'
+    CATEGORY_TYPE_CHOICES = (
+        (HAL, 'HAL'),
+        (HAZ, 'HAZ'),
+        (ROK, '\u015Ar\u00F3droczna'),
+    )
+    
+    kategoria = models.CharField(max_length=3,
+                    choices=CATEGORY_TYPE_CHOICES)
+    
+    def __str__(self):
+        return self.kategoria + ' ' + str(self.rok)
+
+class Faktura(models.Model):
+    # faktury wystawiane przez hufiec (np. za obozy albo wynajem sprzetu)
+    numer            = models.CharField(max_length=20)
+    data_wystawienia = models.DateField(blank=True, null=True)
+    nabywca_nazwa    = models.CharField(max_length=50)
+    nabywca_adres    = models.CharField(max_length=80)
+    nabywca_nip      = models.CharField(max_length=16)
+    kwota            = models.DecimalField(max_digits=10, decimal_places=2) # kwota bez podatku
+    tytul            = models.CharField(max_length=200)
+    sposob_platnosci = models.ForeignKey('SposobPlatnosci', blank=True, null=True)
+    uwagi            = models.CharField(max_length=200)
+    uzytkownik       = models.ForeignKey('Uzytkownik')
+    jednostka        = models.ForeignKey('Jednostka')
+    #hufiec           = models.ForeignKey('Hufiec')
+    
+    ZGLOSZONA    = 'ZG'
+    ZATWIERDZONA = 'ZT'
+    STATUS_TYPE_CHOICES = (
+        (ZGLOSZONA, 'Zg\u0142oszona'),
+        (ZATWIERDZONA, 'Zatwierdzona'),
+    )
+    status = models.CharField(max_length=2,
+                choices=STATUS_TYPE_CHOICES)
+    
+    ZWOLNIONE     = 'ZW'
+    PIEC_PROCENT  = '05'
+    OSIEM_PROCENT = '08'
+    PODSTAWOWA    = '23'    
+    VAT_TYPE_CHOICES = (
+        (ZWOLNIONE, 'zw'),
+        (PIEC_PROCENT, '5'),
+        (OSIEM_PROCENT, '8'),
+        (PODSTAWOWA, '23')
+    )
+    stawka_vat = models.CharField(max_length=2,
+                    choices=VAT_TYPE_CHOICES)
+    
+    

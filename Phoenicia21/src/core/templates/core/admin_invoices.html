@@ -1,0 +1,135 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="col-lg-6">
+
+<div class="panel-group" id="add">
+
+<!-- DODAWANIE FORMATOW NUMERACJI -->
+  <div class="panel panel-default">
+    <div class="panel-heading"><h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#add" href="#collapseOne"><span class="glyphicon glyphicon-plus"></span> Dodaj format numeracji</a>
+    </h4></div>
+    
+    {% if error_log %}
+ 	<div id="collapseOne" class="panel-collapse collapse in">
+      <div class="panel-body"><div class="alert alert-danger" role="alert">
+	  Proszę wpisać datę w formacie RRRR-MM-DD
+	</div>  
+    {% else %}
+    <div id="collapseOne" class="panel-collapse collapse">
+    <div class="panel-body">
+    {% endif %}
+       
+    <form class="form-inline" action="admin_invoices" method="post">{% csrf_token %}     
+    <div class="col-lg-9">
+    	<div class="form-group col-lg-offset-1">
+			<label class="control-label">Rok</label><input type="text" class="form-control" name="rok">	
+		</div>
+        
+        <div class="form-group col-lg-offset-1">
+	        <label class="control-label">Typ</label>
+	        <select class="form-control" name="kategoria">
+		    {% for id, value in kategorie_numeracji %}<option value="{{ id }}">{{ value }}</option>{% endfor %}
+	        </select>
+        </div>
+        
+        <div class="form-group">
+        <div class="col-lg-offset-2 col-lg-9">
+            <button type="submit" class="btn btn-primary" name="add_numeracja">Dodaj</button>
+        </div>
+    </div></div>
+    </form>
+    </div></div>
+  </div></div>
+
+<!-- DODAWANIE SPOSOB PLATNOSCI -->
+  <div class="panel panel-default">
+    <div class="panel-heading"><h4 class="panel-title">
+        <a data-toggle="collapse" data-parent="#add" href="#collapseTwo"><span class="glyphicon glyphicon-plus"></span> Dodaj sposób płatności</a>
+    </h4></div>
+     
+    <div id="collapseTwo" class="panel-collapse collapse">
+    <div class="panel-body">
+       
+    <form class="form-inline" action="admin_invoices" method="post">{% csrf_token %}     
+    <div class="col-lg-12">
+    	<div class="form-group col-lg-offset-1">
+			<label class="control-label">Nazwa</label><input type="text" class="form-control" name="nazwa">	
+		</div>
+		<div class="form-group col-lg-offset-1">
+			<label class="control-label">Numer konta</label><input type="text" class="form-control" name="numer_konta">	
+		</div>
+        
+        <div class="form-group">
+        <div class="col-lg-offset-2 col-lg-9">
+            <button type="submit" class="btn btn-primary" name="add_platnosc">Dodaj</button>
+        </div>
+    </div></div>
+    </form>
+    </div></div>
+  </div>
+
+<!-- LISTA FORMATOW NUMERACJI -->
+
+<div class="panel panel-default">
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Formaty numeracji</h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="admin_invoices" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+	  <th></th>
+	  <th>Nazwa</th>
+	  <th>Typ</th>
+	  <th>Bieżący numer</th>
+  </tr></thead>
+  <tbody>
+  {% for format in formaty_numeracji %}
+  <tr>
+  <td>
+    	<input type="checkbox" name="pick" value="{{ format.id }}">
+  </td>
+  <td>{{ format.rok }}</td>
+  <td>{{ format.get_kategoria_display }}
+  <td>{{ format.biezacy_numer }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+  </table>
+  <div class="form-group">
+  <div class="col-lg-9"><button type="submit" class="btn btn-primary" name="edit">Edytuj</button></div></div>
+  </form></div>
+
+<!-- LISTA SPOSOBW PLATNOSCI -->
+
+<div class="panel panel-default">
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-usd"></span> Sposoby płatności</h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="admin_invoices" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+	  <th></th>
+	  <th>Nazwa</th>
+	  <th>Numer konta</th>
+  </tr></thead>
+  <tbody>
+  {% for sp in sposoby_platnosci %}
+  <tr>
+  <td>
+    	<input type="checkbox" name="pick" value="{{ sp.id }}">
+  </td>
+  <td>{{ sp.nazwa }}</td>
+  <td>{{ sp.numer_konta }}
+  </tr>
+  {% endfor %}
+  </tbody>
+  </table>
+  <div class="form-group">
+  <div class="col-lg-9"><button type="submit" class="btn btn-primary" name="edit">Edytuj</button></div></div>
+  </form></div>
+  
+</div>
+
+{% endblock %}

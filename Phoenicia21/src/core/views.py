@@ -3,11 +3,11 @@ from django.shortcuts import render, redirect
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate, login, logout
-from core.models import Dokument, Uzytkownik, Jednostka, Hufiec, RaportKasowy, BilansOtwarcia, Etykieta, Dekret, OperacjaSalda
+from core.models import Dokument, Uzytkownik, Jednostka, Hufiec, RaportKasowy, BilansOtwarcia, Etykieta, Dekret, OperacjaSalda, Faktura, NumeracjaFaktur, SposobPlatnosci
 import re, decimal, datetime, random, string
 # reportlab imports
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import landscape, A4
+from reportlab.lib.pagesizes import landscape, A4, letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics, ttfonts
@@ -579,6 +579,25 @@ def admin_doctitle(request):
     context  = {'dekrety':dekrety}
     return render(request, 'core/admin_doctitle.html', context)    
 
+def admin_invoices(request):
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    elif not request.user.is_admin:
+        return redirect('access_denied')
+    
+    if 'add_numeracja' in request.POST:
+        format_numeracji = NumeracjaFaktur(rok=int(request.POST['rok']), biezacy_numer=1, kategoria=request.POST['kategoria'])
+        format_numeracji.save()
+        
+    if 'add_platnosc' in request.POST:
+        sposob_platnosci = SposobPlatnosci(nazwa=request.POST['nazwa'], numer_konta=request.POST['numer_konta'])
+        sposob_platnosci.save()
+    
+    formaty_numeracji = NumeracjaFaktur.objects.all()
+    sposoby_platnosci = SposobPlatnosci.objects.all()
+    context  = {'kategorie_numeracji':NumeracjaFaktur.CATEGORY_TYPE_CHOICES, 'formaty_numeracji':formaty_numeracji, 'sposoby_platnosci':sposoby_platnosci}
+    return render(request, 'core/admin_invoices.html', context)    
+
 def reports_cash(request):
     if not request.user.is_authenticated():
         return redirect('auth_login')
@@ -1058,3 +1077,250 @@ def operations_many(request):
             context['jednostki_wybrane']     = select_units(request)
 
     return render(request, 'core/operations_many.html', context)
+
+def invoices(request):
+    
+    def create_invoice_pdf(request, faktura_id):
+        
+        THOUSANDS_DICT = {'1':'tysiąc', '2':'dwa tysiące', '3':'trzy tysiące', '4':'cztery tysiące', '5':'pięć tysięcy',
+                  '6':'sześć tysięcy', '7':'siedem tysięcy', '8':'osiem tysięcy', '9':'dziewięć tysięcy', '0':''}
+        HUNDREADS_DICT = {'1':'sto', '2':'dwieście', '3':'trzysta', '4':'czterysta','5':'pięćset', '6':'sześćset',
+                          '7':'siedemset', '8':'osiemset','9':'dziewięćset', '0':''}
+        TENS_DICT      = {'2':'dwadzieścia', '3':'trzydzieści', '4':'czterdzieści', '5':'pięćdziesiąt', '6':'sześćdziesiąt',
+                          '7':'siedemdziesiąt', '8':'osiemdziesiąt', '9':'dziewięćdziesiąt'}
+        UNITS_DICT     = {'01':'jeden', '02':'dwa', '03':'trzy', '04':'cztery', '05':'pięć', '06':'sześć', '07':'siedem', '08':'osiem',
+                          '09':'dziewięć', '10':'dziesięć', '11':'jedenaście', '12':'dwanaście', '13':'trzynaście', '14':'czternaście',
+                          '15':'piętnaście', '16':'szesnaście', '17':'siedemnaście', '18':'osiemnaście', '19':'dziewiętnaście', '00':''}
+        
+        def convert_amount2string(amount):
+            
+            amount_int = amount.replace('.00', '')
+            amount_string = []
+            
+            if len(amount_int) > 1:
+                amount_string.append(UNITS_DICT['0' + amount_int[-1]] if int(amount_int[-2]) > 1 else '')
+                amount_string.append(TENS_DICT[amount_int[-2]] if int(amount_int[-2]) > 1 else UNITS_DICT[amount_int[-2:]])
+            else:
+                amount_string.append(UNITS_DICT['0' + amount_int[-1]])
+            if len(amount_int) > 2:
+                amount_string.append(HUNDREADS_DICT[amount_int[-3]])
+            if len(amount_int) > 3:
+                amount_string.append(THOUSANDS_DICT[amount_int[-4]])
+                
+            return ' '.join(s for s in reversed(amount_string) if s != '')
+                
+        def divide_title_into_lines(tytul):
+            # szerokosc max 32 znaki
+            tytul_divided = ''
+            text_buffer = ''
+            buffer_index = 0
+            last_space = 0
+            for char in tytul:
+                if char == ' ':
+                    last_space = buffer_index
+                if buffer_index > 32:
+                    tytul_divided += (text_buffer[0:last_space] + '\n')
+                    text_buffer = text_buffer[last_space:]
+                    buffer_index = len(text_buffer)
+                    last_space = 0
+                text_buffer += char
+                buffer_index += 1
+            tytul_divided += text_buffer
+            
+            return tytul_divided
+        
+        response = HttpResponse(content_type='application/pdf')
+        faktura = Faktura.objects.get(id=faktura_id)
+        response['Content-Disposition'] = 'attachment; filename="' + str(faktura.numer) + '.pdf"'
+        
+        invoice_id = faktura.numer
+        parent_name = faktura.nabywca_nazwa
+        address = faktura.nabywca_adres
+        NIP = faktura.nabywca_nip
+        amount = str(faktura.kwota)
+        stawka_vat = faktura.stawka_vat.lower() if faktura.stawka_vat == 'ZW' else faktura.stawka_vat + '%'
+        tytul = divide_title_into_lines(faktura.tytul)
+        
+        #def make_invoice(invoice_id, dirpath, child_name, parent_name, address, NIP, amount, camp_date):
+        # Create the PDF object, using the response object as its "file."
+        p = canvas.Canvas(response)
+        
+        # Draw things on the PDF. Here's where the PDF generation happens.
+        # See the ReportLab documentation for the full list of functionality.
+        p.setPageSize(letter)
+        
+        pdfmetrics.registerFont(TTFont('FreeSerif', 'FreeSerif.ttf'))
+        #p.setFont("Helvetica", 40)
+        
+        # data wystawienia
+        p.setFont("FreeSerif", 12, leading = None)
+        p.drawString(450,770,"Miejscowość: Warszawa")
+        p.drawString(450,758,"Data wystawienia: " + str(faktura.data_wystawienia))
+        p.drawString(450,746,"Data sprzedaży: " + str(faktura.data_wystawienia))
+        
+        # numer faktury
+        p.setFont("FreeSerif", 16, leading = None)
+        p.drawString(250,730,"Faktura VAT")
+        p.setFont("FreeSerif", 14, leading = None)
+        p.drawString(250,710, invoice_id)
+        
+        # sprzedawca
+        p.drawString(20,670,"Sprzedawca:")
+        p.line(20,665,120,665)
+        p.drawString(20,650,"Chorągiew Stołeczna ZHP")
+        p.drawString(20,634,"ul. Piaskowa 4, 01-067 Warszawa")
+        p.drawString(20,618,"NIP: 527-252-61-38")
+        p.drawString(20,602,"Hufiec Warszawa-Ochota")
+        
+        # nabywca
+        p.drawString(300,670,"Nabywca:")
+        p.line(300,665,400,665)
+        #if len(parent_name) > 32:
+        #    p.setFont("FreeSerif", 12, leading = None)
+        #    print('adjusted', invoice_id)
+        parent_name = parent_name.title()
+        p.drawString(300,650, parent_name)
+        p.setFont("FreeSerif", 14, leading = None)
+        p.drawString(300,634, address)
+        p.drawString(300,618,"NIP: " + NIP)
+        
+        # artykuly
+        p.setFont("FreeSerif", 12, leading = None)
+        p.line(20,590,600,590)
+        header = ['L.p.', 'Nazwa towaru\nlub usługi', 'Symbol\nPKWiU', 'Miara', 'Ilość', 'Cena jed.\nbez podatku', 'Wartość\nbez podatku', 'Stawka\npodatku', 'Kwota\npodatku', 'Wartość wraz\nz podatkiem']
+        data   = [header]
+        
+        data.append(['1', tytul, '', 'szt.', '1', amount, amount, stawka_vat, '0.00', amount])
+        data.append(['', '', '', '', '', '', amount, stawka_vat, '0.00', amount])
+        data.append(['', '', '', '', '', 'RAZEM', amount, stawka_vat, '0.00', amount])
+        
+        t=Table(data)
+        t.setStyle(TableStyle([
+                        ('ALIGN',(1,1),(-2,-2),'RIGHT'),
+                       #('TEXTCOLOR',(1,1),(-2,-2),colors.red),
+                       ('VALIGN',(0,0),(0,-1),'TOP'),
+                       #('TEXTCOLOR',(0,0),(0,-1),colors.blue),
+                       ('ALIGN',(0,0),(-1,-1),'CENTER'),
+                       ('VALIGN',(0,-1),(-1,-1),'MIDDLE'),
+                       ('FONTSIZE', (0,0), (-1,-1), 10),
+                       ('FONTNAME', (0,0), (-1,-1), "FreeSerif"),
+                       ('LEADING', (0,0), (-1,-1), 10),
+                       #('TEXTCOLOR',(0,-1),(-1,-1),colors.green),
+                       ('INNERGRID', (0,0), (-1,-3), 0.25, colors.black),
+                       ('BOX', (0,0), (-1,-3), 0.25, colors.black),
+                       ('INNERGRID', (-4,-2), (-1,-1), 0.25, colors.black),
+                       ('BOX', (-4,-2), (-1,-1), 0.25, colors.black),
+                       ('INNERGRID', (-5,-1), (-1,-1), 0.25, colors.black),
+                       ('BOX', (-5,-1), (-1,-1), 0.25, colors.black),
+               ]))
+
+
+        width, height = A4
+        t.wrapOn(p, width, height)
+        t.drawOn(p, 20, 470, 0)
+        
+        # zaplata
+        p.drawString(20, 440,"Do zapłaty: " + amount)
+        p.line(20,435,150,435)
+        p.setFont("FreeSerif", 12, leading = None)
+        p.drawString(20, 420,"Słownie: " + convert_amount2string(amount) + " złotych, zero groszy")
+        
+        if faktura.sposob_platnosci.numer_konta == '-':
+            p.drawString(20, 400,"Sposób płatności: gotówka") # platnosc gotowka
+        else:
+            p.drawString(20, 400,"Sposób płatności: zapłacono przelewem") # przelew
+        
+        p.drawString(20, 385,"Nr konta: " + faktura.sposob_platnosci.numer_konta)
+        p.drawString(20, 370,"Termin zapłaty: " + str(faktura.data_wystawienia))
+        
+        # adnotacje
+        p.setFont("FreeSerif", 10, leading = None)
+        p.drawString(20, 335,"UWAGI: Zwolnienie z VAT na podstawie art. 43 ust. 1 pkt. 21 ustawy o VAT (Dz. U. z 2004 r. Nr 54, poz. 535 z późn. zm.).")
+        
+        # podpis wystawcy
+        p.drawString(400,270,"phm. Krzysztof Szczepaniak")
+        p.line(400,260,520,260)
+        p.setFont("FreeSerif", 10, leading = None)
+        p.drawString(400,250,"Podpis osoby upoważnionej")
+        p.drawString(400,240,"do wystawienia faktury")
+        
+        # Close the PDF object cleanly, and we're done.
+        p.showPage()
+        p.save()
+        
+        return response
+    
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    elif not (request.user.is_staff or request.user.is_admin):
+        # ograniczenie wyboru jednostek
+        jednostki = request.user.jednostka.all().order_by('nazwa')
+    else:
+        jednostki = Jednostka.objects.all().order_by('nazwa')
+        
+    faktury = Faktura.objects.filter(jednostka__in=jednostki)
+    context = {'faktury': faktury}
+    
+    if 'approve' in request.POST:
+        context['zatwierdzane_faktury'] = []
+        context['numeracje']            = NumeracjaFaktur.objects.all()
+        context['sposoby_platnosci']    = SposobPlatnosci.objects.all()
+        for fakt_id in request.POST.getlist('pick'):
+            appr_fakt = Faktura.objects.get(id=fakt_id)
+            context['zatwierdzane_faktury'].append(appr_fakt)
+    
+    if 'approve_confirm' in request.POST:
+        numeracja        = NumeracjaFaktur.objects.get(id=request.POST['numeracja'])
+        sposob_platnosci = SposobPlatnosci.objects.get(id=request.POST['sposob_platnosci'])
+        for fakt_id in request.POST.getlist('pick'):
+            appr_fakt                  = Faktura.objects.get(id=fakt_id)
+            appr_fakt.status           = 'ZT'
+            appr_fakt.data_wystawienia = date.today()
+            appr_fakt.numer            = str(numeracja.biezacy_numer) + '/034/' + numeracja.kategoria + '/' + str(numeracja.rok)
+            appr_fakt.sposob_platnosci = sposob_platnosci  
+            appr_fakt.save()
+            numeracja.biezacy_numer += 1
+            numeracja.save()
+    
+    
+    pdfs = [ key for key in request.POST.keys() if re.match('pdf_\d+', key)]
+    if pdfs:
+        return create_invoice_pdf(request, pdfs[0].replace('pdf_', ''))
+    
+    return render(request, 'core/invoices.html', context)
+
+def invoices_upload(request):
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    
+    def add_invoice(faktura):
+        
+        def parse_vat(stawka_vat):
+            stawka_vat = stawka_vat.strip()
+            if stawka_vat == 'zw':
+                return 'ZW'
+            elif stawka_vat == '5':
+                return '05'
+            elif stawka_vat == '8':
+                return '08'
+            elif stawka_vat == '23':
+                return '23'
+        
+        dane_faktury = str(faktura[0]).split(';')    
+        
+        faktura_nowa = Faktura(numer='', data_wystawienia=None, nabywca_nazwa=dane_faktury[0], nabywca_adres=dane_faktury[1], nabywca_nip=dane_faktury[2], kwota=float(dane_faktury[3]), 
+                               stawka_vat=parse_vat(dane_faktury[4]), tytul=dane_faktury[5], sposob_platnosci=None, uwagi='', status='ZG', uzytkownik=request.user, 
+                               jednostka=request.user.jednostka.all()[0])
+        faktura_nowa.save()
+    
+    if 'upload' in request.POST:
+        
+        import unicodecsv as csv
+        plik_faktur = csv.reader(request.FILES['plik_faktur'], encoding='utf-8')
+        for faktura in plik_faktur:
+            if 'nabywca_nazwa' in str(faktura):
+                continue
+            add_invoice(faktura)
+    
+    context = {}
+    return render(request, 'core/invoices_upload.html', context)

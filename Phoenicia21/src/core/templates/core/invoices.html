@@ -1,0 +1,132 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="col-lg-12">
+
+<div class="panel panel-default">
+
+<!-- PODGLAD FAKTUR -->
+
+{% if not zatwierdzane_faktury %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Podgląd danych </h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="invoices" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+      {% if request.user.is_staff or request.user.is_admin %}<th></th>{% endif %}
+	  <th>Numer</th>
+	  <th>Data wystawienia</th>
+	  <th>Nabywca</th>
+	  <th>Kwota (bez podatku)</th>
+	  <th>Stawka VAT</th>
+	  <th>Tytuł</th>
+	  <th>Sposób płatności</th>
+	  <th>Uwagi</th>
+	  <th>Status</th>
+	  <th>Zgłaszający</th>
+	  <th>Jednostka</th>
+  </tr></thead>
+  
+  <tbody>
+  {% for fakt in faktury %}
+  <tr>
+  {% if request.user.is_staff or request.user.is_admin %}<td><input type="checkbox" name="pick" value="{{ fakt.id }}"></td>{% endif %}
+  <td>{{ fakt.numer }}</td>
+  <td>{{ fakt.data_wystawienia|date:"Y-m-d" }}</td>
+  <td>{{ fakt.nabywca_nazwa }} {{ fakt.nabywca_adres }} NIP: {{ fakt.nabywca_nip }} </td>
+  <td>{{ fakt.kwota }} </td>
+  <td>{{ fakt.stawka_vat }} </td>
+  <td>{{ fakt.tytul }} </td>
+  <td>{{ fakt.sposob_platnosci }} </td>
+  <td>{{ fakt.uwagi }} </td>
+  <td class="{% if fakt.status == 'ZG' %}warning{% elif fakt.status == 'ZT' %}success{% endif %}">{{ fakt.get_status_display }} 
+  {% if fakt.status == 'ZT' %}
+  <br />
+  <button type="submit" class="btn btn-primary" name="pdf_{{ fakt.id }}">PDF</button>
+  {% endif %}
+  </td>
+  <td>{{ fakt.uzytkownik }} </td>
+  <td>{{ fakt.jednostka }} </td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </div>
+      {% if request.user.is_staff or request.user.is_admin %}
+      <div class="form-group">
+      <div class="col-xs-9">
+            <button type="submit" class="btn btn-primary" name="approve">Zatwierdź</button>
+            <button type="submit" class="btn btn-primary" name="delete">Usuń</button>
+    </div></div>
+    {% endif %}
+  </form>  
+
+{% elif zatwierdzane_faktury %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-ok"></span> Zostaną zatwierdzone faktury:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th>Numer</th>
+  <th>Data wystawienia</th>
+  <th>Nabywca</th>
+  <th>Kwota (bez podatku)</th>
+  <th>Stawka VAT</th>
+  <th>Tytuł</th>
+  <th>Sposób płatności</th>
+  <th>Uwagi</th>
+  <th>Status</th>
+  <th>Zgłaszający</th>
+  <th>Jednostka</th>
+  
+  <form class="form-inline" role="form" action="invoices" method="post">{% csrf_token %}
+  
+  {% for fakt in zatwierdzane_faktury %}
+  <tr>
+  <input type='hidden' name="pick" value="{{ fakt.id }}" />
+  <td>{{ fakt.numer }}</td>
+  <td>{{ fakt.data_wystawienia|date:"Y-m-d" }}</td>
+  <td>{{ fakt.nabywca_nazwa }} {{ fakt.nabywca_adres }} NIP: {{ fakt.nabywca_nip }} </td>
+  <td>{{ fakt.kwota }} </td>
+  <td>{{ fakt.stawka_vat }} </td>
+  <td>{{ fakt.tytul }} </td>
+  <td>{{ fakt.sposob_platnosci }} </td>
+  <td>{{ fakt.uwagi }} </td>
+  <td>{{ fakt.get_status_display }} </td>
+  <td>{{ fakt.uzytkownik }} </td>
+  <td>{{ fakt.jednostka }} </td>
+  </tr>
+  {% endfor %}
+  
+  </table>
+  </div>
+  
+  <div class="col-lg-6">
+  <div class="panel panel-default">
+  <div class="panel-heading"><h4><span class="glyphicon glyphicon-list"></span> Podaj zestaw numeracji i sposób płatności, który będzie przydzielony do każdej z nich:</h4></div>
+  	<div class="form-group col-lg-offset-1">
+		<label class="control-label">Numeracja</label>
+   		<select class="form-control" name="numeracja">
+		{% for num in numeracje %}<option value="{{ num.id }}">{{ num }}</option>{% endfor %}
+   		</select>
+   		<label class="control-label">Sposób płatności</label>
+   		<select class="form-control" name="sposob_platnosci">
+		{% for sp in sposoby_platnosci %}<option value="{{ sp.id }}">{{ sp }} {{ sp.numer_konta }}</option>{% endfor %}
+   		</select>
+  	</div>
+  </div></div>
+  
+  <div class="form-group"><div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="approve_confirm">Potwierdź</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+
+  </form>
+
+{% endif %}
+</div></div>
+
+{% endblock %}

@@ -20,7 +20,10 @@ urlpatterns = [
     url(r'admin_balance$', views.admin_balance, name='admin_balance'),
     url(r'admin_tags$', views.admin_tags, name='admin_tags'),
     url(r'admin_doctitle$', views.admin_doctitle, name='admin_doctitle'),
+    url(r'admin_invoices$', views.admin_invoices, name='admin_invoices'),
     url(r'restore_password$', views.restore_password, name='restore_password'),
     url(r'reports_cash$', views.reports_cash, name='reports_cash'),
     url(r'reports_balance$', views.reports_balance, name='reports_balance'),
+    url(r'invoices$', views.invoices, name='invoices'),
+    url(r'invoices_upload$', views.invoices_upload, name='invoices_upload'),
 ]
