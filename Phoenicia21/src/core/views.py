@@ -1296,7 +1296,8 @@ def invoices(request):
                 del_fakt.delete()
             else:
                 error_log_delete = 'usuwanie_zatwierdzonej'
-        context['error_log_delete'] = error_log_delete
+        if error_log_delete:
+            context['error_log_delete'] = error_log_delete
     
     pdfs = [ key for key in request.POST.keys() if re.match('pdf_\d+', key)]
     if pdfs:
@@ -1315,13 +1316,13 @@ def invoices_upload(request):
         
         def parse_vat(stawka_vat):
             stawka_vat = stawka_vat.strip()
-            if stawka_vat == 'zw':
+            if (stawka_vat == 'zw' or stawka_vat == 'ZW'):
                 return 'ZW'
-            elif stawka_vat == '5':
+            elif (stawka_vat == '5' or stawka_vat == '05'):
                 return '05'
-            elif stawka_vat == '8':
+            elif (stawka_vat == '8' or stawka_vat == '08'):
                 return '08'
-            elif stawka_vat == '23':
+            elif (stawka_vat == '23' or stawka_vat == '23'):
                 return '23'
         
         dane_faktury = str(faktura[0]).split(';')    
