@@ -1094,7 +1094,9 @@ def invoices(request):
         
         def convert_amount2string(amount):
             
-            amount_int = amount.replace('.00', '')
+            amount_int = amount
+            if amount_int == '00':
+                return 'zero'
             amount_string = []
             
             if len(amount_int) > 1:
@@ -1133,13 +1135,17 @@ def invoices(request):
         faktura = Faktura.objects.get(id=faktura_id)
         response['Content-Disposition'] = 'attachment; filename="' + str(faktura.numer) + '.pdf"'
         
-        invoice_id = faktura.numer
+        invoice_id  = faktura.numer
         parent_name = faktura.nabywca_nazwa
-        address = faktura.nabywca_adres
-        NIP = faktura.nabywca_nip
-        amount = str(faktura.kwota)
-        stawka_vat = faktura.stawka_vat.lower() if faktura.stawka_vat == 'ZW' else faktura.stawka_vat + '%'
-        tytul = divide_title_into_lines(faktura.tytul)
+        address     = faktura.nabywca_adres
+        NIP         = faktura.nabywca_nip
+        tytul       = divide_title_into_lines(faktura.tytul)
+        # kwoty
+        amount          = str(faktura.kwota)
+        tax             = decimal.Decimal(faktura.stawka_vat if faktura.stawka_vat != 'ZW' else 0.00) / 100
+        tax_amount      = str(round(faktura.kwota * tax, 2))
+        amount_with_tax = str(round(faktura.kwota + faktura.kwota * tax, 2))
+        stawka_vat      = faktura.stawka_vat.lower() if faktura.stawka_vat == 'ZW' else str(int(faktura.stawka_vat)) + '%'
         
         #def make_invoice(invoice_id, dirpath, child_name, parent_name, address, NIP, amount, camp_date):
         # Create the PDF object, using the response object as its "file."
@@ -1190,9 +1196,9 @@ def invoices(request):
         header = ['L.p.', 'Nazwa towaru\nlub usługi', 'Symbol\nPKWiU', 'Miara', 'Ilość', 'Cena jed.\nbez podatku', 'Wartość\nbez podatku', 'Stawka\npodatku', 'Kwota\npodatku', 'Wartość wraz\nz podatkiem']
         data   = [header]
         
-        data.append(['1', tytul, '', 'szt.', '1', amount, amount, stawka_vat, '0.00', amount])
-        data.append(['', '', '', '', '', '', amount, stawka_vat, '0.00', amount])
-        data.append(['', '', '', '', '', 'RAZEM', amount, stawka_vat, '0.00', amount])
+        data.append(['1', tytul, '', 'szt.', '1', amount, amount, stawka_vat, tax_amount, amount_with_tax])
+        data.append(['', '', '', '', '', '', amount, stawka_vat, tax_amount, amount_with_tax])
+        data.append(['', '', '', '', '', 'RAZEM', amount, stawka_vat, tax_amount, amount_with_tax])
         
         t=Table(data)
         t.setStyle(TableStyle([
@@ -1220,10 +1226,10 @@ def invoices(request):
         t.drawOn(p, 20, 470, 0)
         
         # zaplata
-        p.drawString(20, 440,"Do zapłaty: " + amount)
+        p.drawString(20, 440,"Do zapłaty: " + amount_with_tax)
         p.line(20,435,150,435)
         p.setFont("FreeSerif", 12, leading = None)
-        p.drawString(20, 420,"Słownie: " + convert_amount2string(amount) + " złotych, zero groszy")
+        p.drawString(20, 420,"Słownie: " + convert_amount2string(amount_with_tax.split('.')[0]) + " złotych, " + convert_amount2string(amount_with_tax.split('.')[1]) + " groszy")
         
         if faktura.sposob_platnosci.numer_konta == '-':
             p.drawString(20, 400,"Sposób płatności: gotówka") # platnosc gotowka
@@ -1235,7 +1241,8 @@ def invoices(request):
         
         # adnotacje
         p.setFont("FreeSerif", 10, leading = None)
-        p.drawString(20, 335,"UWAGI: Zwolnienie z VAT na podstawie art. 43 ust. 1 pkt. 21 ustawy o VAT (Dz. U. z 2004 r. Nr 54, poz. 535 z późn. zm.).")
+        if faktura.stawka_vat == 'ZW':
+            p.drawString(20, 335,"UWAGI: Zwolnienie z VAT na podstawie art. 43 ust. 1 pkt. 21 ustawy o VAT (Dz. U. z 2004 r. Nr 54, poz. 535 z późn. zm.).")
         
         # podpis wystawcy
         p.drawString(400,270,"phm. Krzysztof Szczepaniak")
@@ -1324,3 +1331,26 @@ def invoices_upload(request):
     
     context = {}
     return render(request, 'core/invoices_upload.html', context)
+
+def invoices_single(request):
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    
+    sposoby_platnosci = SposobPlatnosci.objects.all()
+    context = {'sposoby_platnosci':sposoby_platnosci, 'stawki_vat':Faktura.VAT_TYPE_CHOICES}
+    
+    if 'send' in request.POST:
+        error_log = []
+        if (not request.POST['nabywca_nazwa']) or (not request.POST['nabywca_adres']) or (not re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['kwota'])) or (not request.POST['tytul']):
+            error_log.append('error') 
+            context['error_log'] = error_log
+        
+        if not error_log:
+            sposob_platnosci = SposobPlatnosci.objects.get(id=request.POST['sposob_platnosci'])
+            faktura = Faktura(numer='', data_wystawienia=None, nabywca_nazwa=request.POST['nabywca_nazwa'], nabywca_adres=request.POST['nabywca_adres'], nabywca_nip=request.POST['nabywca_nip'], 
+                               kwota=float(request.POST['kwota'].replace(',', '.')), stawka_vat=request.POST['stawka_vat'], tytul=request.POST['tytul'], sposob_platnosci=sposob_platnosci,
+                               uwagi='', status='ZG', uzytkownik=request.user, jednostka=request.user.jednostka.all()[0])
+            faktura.save()
+    
+    return render(request, 'core/invoices_single.html', context)
+

@@ -26,4 +26,5 @@ urlpatterns = [
     url(r'reports_balance$', views.reports_balance, name='reports_balance'),
     url(r'invoices$', views.invoices, name='invoices'),
     url(r'invoices_upload$', views.invoices_upload, name='invoices_upload'),
+    url(r'invoices_single$', views.invoices_single, name='invoices_single'),
 ]
