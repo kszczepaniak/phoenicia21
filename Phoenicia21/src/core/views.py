@@ -1290,6 +1290,7 @@ def invoices(request):
             numeracja.save()
             
     if 'delete' in request.POST:
+        error_log_delete = ''
         for fakt_id in request.POST.getlist('pick'):
             del_fakt = Faktura.objects.get(id=fakt_id)
             if del_fakt.status != 'ZT':

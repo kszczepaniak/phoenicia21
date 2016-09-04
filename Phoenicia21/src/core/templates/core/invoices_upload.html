@@ -49,6 +49,10 @@ Szczególnie zwróć uwagę czy poprawnie wyświetlają się polskie znaki, jeż
   <div class="panel panel-default">
     <div class="panel-heading"><h3><span class="glyphicon glyphicon-upload"></span> Zgłaszanie wielu faktur (przesyłanie pliku)</h3></div>
     
+    <div class="alert alert-info" role="alert">
+    Prześlij plik w formacie .csv z kodowaniem znaków w formacie UTF-8.
+	</div>
+    
     <div class="panel-body">     
     <form class="form-inline" action="invoices_upload" method="post" enctype="multipart/form-data">{% csrf_token %}     
     <div class="col-lg-9">
