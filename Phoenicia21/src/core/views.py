@@ -1288,7 +1288,15 @@ def invoices(request):
             appr_fakt.save()
             numeracja.biezacy_numer += 1
             numeracja.save()
-    
+            
+    if 'delete' in request.POST:
+        for fakt_id in request.POST.getlist('pick'):
+            del_fakt = Faktura.objects.get(id=fakt_id)
+            if del_fakt.status != 'ZT':
+                del_fakt.delete()
+            else:
+                error_log_delete = 'usuwanie_zatwierdzonej'
+        context['error_log_delete'] = error_log_delete
     
     pdfs = [ key for key in request.POST.keys() if re.match('pdf_\d+', key)]
     if pdfs:
@@ -1300,7 +1308,10 @@ def invoices_upload(request):
     if not request.user.is_authenticated():
         return redirect('auth_login')
     
-    def add_invoice(faktura):
+    import unicodecsv as csv
+    context = {}
+    
+    def add_invoice(faktura, mode):
         
         def parse_vat(stawka_vat):
             stawka_vat = stawka_vat.strip()
@@ -1318,18 +1329,27 @@ def invoices_upload(request):
         faktura_nowa = Faktura(numer='', data_wystawienia=None, nabywca_nazwa=dane_faktury[0], nabywca_adres=dane_faktury[1], nabywca_nip=dane_faktury[2], kwota=float(dane_faktury[3]), 
                                stawka_vat=parse_vat(dane_faktury[4]), tytul=dane_faktury[5], sposob_platnosci=None, uwagi='', status='ZG', uzytkownik=request.user, 
                                jednostka=request.user.jednostka.all()[0])
-        faktura_nowa.save()
+        if mode == 'add':
+            faktura_nowa.save()
+        elif mode == 'verify':
+            return faktura_nowa
     
-    if 'upload' in request.POST:
+    if 'upload_verify' in request.POST:
         
-        import unicodecsv as csv
+        faktury = []
         plik_faktur = csv.reader(request.FILES['plik_faktur'], encoding='utf-8')
         for faktura in plik_faktur:
             if 'nabywca_nazwa' in str(faktura):
                 continue
-            add_invoice(faktura)
+            faktury.append(add_invoice(faktura, 'verify'))
+            
+        context['faktury'] = faktury
     
-    context = {}
+    if 'upload' in request.POST:
+        
+        for faktura in request.POST.getlist('faktury'):
+            add_invoice([faktura], 'add')
+
     return render(request, 'core/invoices_upload.html', context)
 
 def invoices_single(request):

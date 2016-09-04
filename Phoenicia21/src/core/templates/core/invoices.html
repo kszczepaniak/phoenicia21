@@ -3,6 +3,14 @@
 
 <div class="col-lg-12">
 
+<!--  WYSWIETLANIE KOMUNIKATU BLEDU -->
+{% if error_log_delete %}
+<div class="alert alert-danger" role="alert">	
+Jedna lub więcej z wybranych faktur jest już zatwierdzona i nie może być usunięta.			
+</div>
+{% endif %}
+<!-- KONIEC KOMUNIKATU BLEDU -->
+
 <div class="panel panel-default">
 
 <!-- PODGLAD FAKTUR -->

@@ -1,6 +1,49 @@
 {% extends "core/main.html" %}
 {% block content %}
 
+<!--  WYSWIETLANIE WRZUCANYCH FAKTUR -->
+{% if faktury %}
+
+<div class="col-lg-9">
+
+<div class="alert alert-info" role="alert">
+Sprawdź poprawność danych i jeżeli wszystko się zgadza naciśnij przycisk "Zatwierdź"<br />
+Szczególnie zwróć uwagę czy poprawnie wyświetlają się polskie znaki, jeżeli nie - upewnij się, że przesyłany dokument jest zapisany w formacie UTF-8
+</div>
+
+  <form class="form-horizontal" action="invoices_upload" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+	  <th>Nabywca</th>
+	  <th>Kwota (bez podatku)</th>
+	  <th>Stawka VAT</th>
+	  <th>Tytuł</th>
+  </tr></thead>
+  
+  <tbody>
+  {% for fakt in faktury %}
+  <tr>
+  <input type='hidden' name="faktury" value="{{ fakt.nabywca_nazwa }};{{ fakt.nabywca_adres }};{{ fakt.nabywca_nip }};{{ fakt.kwota }};{{ fakt.stawka_vat }};{{ fakt.tytul }}" />
+  <td>{{ fakt.nabywca_nazwa }} {{ fakt.nabywca_adres }} NIP: {{ fakt.nabywca_nip }} </td>
+  <td>{{ fakt.kwota }} </td>
+  <td>{{ fakt.stawka_vat }} </td>
+  <td>{{ fakt.tytul }} </td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+      <div class="form-group">
+      <div class="col-xs-9">
+            <button type="submit" class="btn btn-danger" name="upload">Zatwierdź</button>
+            <button type="submit" class="btn btn-info" name="cancel">Anuluj</button>
+    </div></div>
+  </form> 
+
+<!-- KONIEC WYSWIETLANIA -->
+			
+{% else %}
+
 <div class="col-lg-6">
 
   <div class="panel panel-default">
@@ -14,7 +57,7 @@
 		</div>
         <div class="form-group">
         <div class="col-lg-offset-2 col-lg-9">
-            <button type="submit" class="btn btn-primary" name="upload">Prześlij</button>
+            <button type="submit" class="btn btn-primary" name="upload_verify">Prześlij</button>
         </div>
         
     </div>
@@ -22,5 +65,7 @@
     </div>
     </form>
     </div></div></div>
+
+{% endif %}
 
 {% endblock %}
