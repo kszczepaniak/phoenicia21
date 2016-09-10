@@ -1139,7 +1139,7 @@ def invoices(request):
         parent_name = faktura.nabywca_nazwa
         address     = faktura.nabywca_adres
         NIP         = faktura.nabywca_nip
-        tytul       = divide_title_into_lines(faktura.tytul)
+        tytul       = divide_title_into_lines(faktura.tytul.replace('\r\n', ''))
         # kwoty
         amount          = str(faktura.kwota)
         tax             = decimal.Decimal(faktura.stawka_vat if faktura.stawka_vat != 'ZW' else 0.00) / 100
@@ -1326,10 +1326,15 @@ def invoices_upload(request):
             elif (stawka_vat == '23' or stawka_vat == '23'):
                 return '23'
         
-        dane_faktury = str(faktura[0]).split(';')    
+        if re.search(';', str(faktura[0])):
+            dane_faktury = str(faktura[0]).split(';')
+            tytul = dane_faktury[5]
+        elif re.search(',', str(faktura)):
+            dane_faktury = faktura
+            tytul = ''.join(dane_faktury[5:])
         
         faktura_nowa = Faktura(numer='', data_wystawienia=None, nabywca_nazwa=dane_faktury[0], nabywca_adres=dane_faktury[1], nabywca_nip=dane_faktury[2], kwota=float(dane_faktury[3]), 
-                               stawka_vat=parse_vat(dane_faktury[4]), tytul=dane_faktury[5], sposob_platnosci=None, uwagi='', status='ZG', uzytkownik=request.user, 
+                               stawka_vat=parse_vat(dane_faktury[4]), tytul=tytul, sposob_platnosci=None, uwagi='', status='ZG', uzytkownik=request.user, 
                                jednostka=request.user.jednostka.all()[0])
         if mode == 'add':
             faktura_nowa.save()
