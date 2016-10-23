@@ -34,17 +34,26 @@ class Dokument(models.Model):
     typ = models.CharField(max_length=2,
                            choices=TYP_DOKUMENTU_CHOICES)
     
-    dekret            = models.ForeignKey('Dekret', blank=True, null=True)
-    numer             = models.CharField(max_length=50)
-    opis              = models.CharField(max_length=70)                      # krotki dowolny opis czego dotyczy dokument
-    wplyw             = models.DecimalField(max_digits=10, decimal_places=2)
-    wydatek           = models.DecimalField(max_digits=10, decimal_places=2)
-    etykiety          = models.ManyToManyField(Etykieta) 
+    dekret                 = models.ForeignKey('Dekret', blank=True, null=True)
+    numer                  = models.CharField(max_length=50)
+    opis                   = models.CharField(max_length=70)                      # krotki dowolny opis czego dotyczy dokument
+    wplyw                  = models.DecimalField(max_digits=10, decimal_places=2)
+    wydatek                = models.DecimalField(max_digits=10, decimal_places=2)
+    etykiety               = models.ManyToManyField(Etykieta) 
     #zaliczka          = models.ForeignKey('Account', blank=True, null=True)
-    uzytkownik        = models.ForeignKey('Uzytkownik')
-    jednostka         = models.ForeignKey('Jednostka')
-    #hufiec            = models.ForeignKey('Hufiec')
-    raport_kasowy     = models.ForeignKey('RaportKasowy', blank=True, null=True)
+    uzytkownik             = models.ForeignKey('Uzytkownik')
+    jednostka              = models.ForeignKey('Jednostka')
+    #hufiec               = models.ForeignKey('Hufiec')
+    raport_kasowy          = models.ForeignKey('RaportKasowy', blank=True, null=True)
+    # pola potrzebne do zglaszania faktur
+    uzytkownik_zglaszajacy = models.ForeignKey('Uzytkownik', related_name='zglaszajacy')
+    ZGLOSZONA    = 'ZG'
+    ZATWIERDZONA = 'ZT'
+    STATUS_CHOICES = (
+        (ZGLOSZONA, 'Zg\u0142oszona'),
+        (ZATWIERDZONA, 'Zatwierdzona'),
+    )
+    status = models.CharField(max_length=2, choices=STATUS_CHOICES) 
 
 class Dekret(models.Model):
     numer = models.CharField(max_length=16)

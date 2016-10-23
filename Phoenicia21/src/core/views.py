@@ -14,6 +14,7 @@ from reportlab.pdfbase import pdfmetrics, ttfonts
 from django.http import HttpResponse
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab import rl_config
+from django.template.context_processors import request
 
 # email uzywany przez system do rozsylania wiadomosci
 EMAIL_SYSTEMU = 'kszczepaniak@gmx.com'
@@ -76,7 +77,7 @@ def docs_add(request):
         wydatek = 0.0 if request.POST['wydatek'] == '' else request.POST['wydatek'].replace(',', '.')
         
         dokument = Dokument(data_dokumentu=request.POST['data_dokumentu'], typ=request.POST['typ'], numer=request.POST['numer'], opis=request.POST['opis'], wplyw=wplyw, 
-                            wydatek=wydatek, jednostka=jednostka, uzytkownik=request.user)        
+                            wydatek=wydatek, jednostka=jednostka, uzytkownik=request.user, uzytkownik_zglaszajacy=request.user, status='ZT')        
         dokument.save()
         
         # dodwanie etykiet
@@ -150,6 +151,9 @@ def docs_search(request):
     def search_data(request):
         kwargs    = {}
         from django.db.models import Q
+        
+        # wybieranie tylko faktur zatwierdzonych do wykonywania operacji na nich
+        kwargs['status'] = 'ZT'
                 
         if request.POST['jednostka'] != '0':
             kwargs['jednostka'] = int(request.POST['jednostka'])
@@ -207,8 +211,8 @@ def docs_search(request):
             old_unit = dokument.jednostka
             
             if old_unit == new_unit:
-                wplyw_difference   = dokument.wplyw - decimal.Decimal(request.POST.getlist('wplyw')[dok])
-                wydatek_difference = dokument.wydatek - decimal.Decimal(request.POST.getlist('wydatek')[dok]) 
+                wplyw_difference   = dokument.wplyw - decimal.Decimal(request.POST.getlist('wplyw')[dok].replace(',', '.'))
+                wydatek_difference = dokument.wydatek - decimal.Decimal(request.POST.getlist('wydatek')[dok].replace(',', '.')) 
                 new_unit.saldo -= wplyw_difference
                 new_unit.saldo += wydatek_difference
 
@@ -216,8 +220,8 @@ def docs_search(request):
             else:
                 old_unit.saldo -= dokument.wplyw
                 old_unit.saldo += dokument.wydatek
-                new_unit.saldo += decimal.Decimal(request.POST.getlist('wplyw')[dok])
-                new_unit.saldo -= decimal.Decimal(request.POST.getlist('wydatek')[dok])
+                new_unit.saldo += decimal.Decimal(request.POST.getlist('wplyw')[dok].replace(',', '.'))
+                new_unit.saldo -= decimal.Decimal(request.POST.getlist('wydatek')[dok].replace(',', '.'))
                 old_unit.save()
             new_unit.save()        
         
@@ -231,8 +235,8 @@ def docs_search(request):
         dokument.typ            = request.POST.getlist('typ')[dok]
         dokument.numer          = request.POST.getlist('numer')[dok]
         dokument.opis           = request.POST.getlist('opis')[dok]
-        dokument.wplyw          = request.POST.getlist('wplyw')[dok]
-        dokument.wydatek        = request.POST.getlist('wydatek')[dok]
+        dokument.wplyw          = request.POST.getlist('wplyw')[dok].replace(',', '.')
+        dokument.wydatek        = request.POST.getlist('wydatek')[dok].replace(',', '.')
         dokument.jednostka      = new_unit
         # usun wszystkie etykiety i dodaj wybrane w edycji (czyli pozostawia niezmienione w efekcie)
         dokument.etykiety.clear()
@@ -308,6 +312,174 @@ def docs_search(request):
         context['default'] = 'search'
 
     return render(request, 'core/docs_search.html', context)
+
+def docs_confirm(request):
+    
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    
+    def validate_data(request, dok, dok_id, error_log):
+        # weryfikacja danych przy edycji dokumentow
+        
+        kwota = False
+        
+        if not (re.search('^\d{4}-[0-1]\d-[0-3]\d$', request.POST.getlist('data_dokumentu')[dok])): error_log.add(dok_id)
+          
+        if not request.POST.getlist('numer')[dok]: error_log.add(dok_id)
+        if not request.POST.getlist('opis')[dok]: error_log.add(dok_id)
+        if not (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST.getlist('wplyw')[dok])): 
+            error_log.add(dok_id)
+            kwota = True
+        if not (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST.getlist('wydatek')[dok])): 
+            error_log.add(dok_id)
+            kwota = True
+        
+        if not kwota:
+            if (request.POST.getlist('wplyw')[dok] == '' and request.POST.getlist('wydatek')[dok] == ''):
+                error_log.add(dok_id)
+            elif (request.POST.getlist('wplyw')[dok] == '' or request.POST.getlist('wydatek')[dok] == ''): pass
+            elif (float(request.POST.getlist('wplyw')[dok].replace(',', '.')) and float(request.POST.getlist('wydatek')[dok].replace(',', '.'))):
+                error_log.add(dok_id)    
+    
+    def change_document_confirm(request, dok): 
+        ''' ta wersja funkcji nie zmienia salda - zgloszona faktura nie wplywa na saldo poki nie zostanie zatwierdzona '''    
+        
+        # znajdz edytowany dokument w bazie
+        dokument = Dokument.objects.get(id=dok_id)
+        new_unit = Jednostka.objects.get(id=request.POST.getlist('jednostka')[dok])
+        
+        dokument.data_dokumentu = request.POST.getlist('data_dokumentu')[dok]
+        dokument.typ            = request.POST.getlist('typ')[dok]
+        dokument.numer          = request.POST.getlist('numer')[dok]
+        dokument.opis           = request.POST.getlist('opis')[dok]
+        dokument.wplyw          = request.POST.getlist('wplyw')[dok].replace(',', '.')
+        dokument.wydatek        = request.POST.getlist('wydatek')[dok].replace(',', '.')
+        dokument.jednostka      = new_unit
+        # usun wszystkie etykiety i dodaj wybrane w edycji (czyli pozostawia niezmienione w efekcie)
+        dokument.etykiety.clear()
+        etykiety = [ Etykieta.objects.get(id=ety) for ety in request.POST.getlist('etykiety' + str(dokument.id)) ]
+        dokument.etykiety.add(*etykiety)        
+        dokument.save()  
+        
+    def change_balance(jednostka, wplyw, wydatek):
+        # zmiana salda
+        
+        jednostka.saldo += decimal.Decimal(wplyw)
+        jednostka.saldo -= decimal.Decimal(wydatek)
+        jednostka.save()
+    
+    if (request.user.is_staff or request.user.is_admin):  
+        jednostki       = Jednostka.objects.all().order_by('nazwa')
+        typy_dokumentow = Dokument.TYP_DOKUMENTU_CHOICES
+    else:
+        jednostki = request.user.jednostka.all().order_by('nazwa')
+        typy_dokumentow = (('FV', 'Faktura VAT'),)
+    etykiety = Etykieta.objects.all()
+    context  = {'jednostki': jednostki, 'etykiety':etykiety, 'typy_dokumentow':typy_dokumentow}
+    
+    # wyswietla dokumenty do edycji        
+    if 'edit' in request.POST:
+        context['edytowane_dokumenty'] = []
+        for dok_id in request.POST.getlist('pick'):
+            context['edytowane_dokumenty'].append(Dokument.objects.get(id=dok_id))
+   
+    # wprowadzenie zmian w dokumentach
+    elif 'change' in request.POST:
+        context['edytowane_dokumenty'] = []
+        error_log = set()
+        for dok in range(len(request.POST.getlist('pick'))):
+            dok_id = request.POST.getlist('pick')[dok]
+            validate_data(request, dok, dok_id, error_log)
+            if dok_id not in error_log:
+                change_document_confirm(request, dok)    
+        for dok_id in error_log:
+            context['edytowane_dokumenty'].append(Dokument.objects.get(id=dok_id))
+        context['error_log'] = error_log
+        context['default'] = 'search'
+        
+    # wyswietla liste wybranych do odrzucenia dokumentow i prosi o potwierdzenie
+    elif 'reject' in request.POST:
+        context['usuwane_dokumenty'] = []
+        for dok_id in request.POST.getlist('pick'):
+            context['usuwane_dokumenty'].append(Dokument.objects.get(id=dok_id))
+        
+    # usuwanie wybranych dokumentow
+    elif 'reject_confirm' in request.POST:
+        for dok_id in request.POST.getlist('pick'):
+            del_dok = Dokument.objects.get(id=dok_id)   
+            del_dok.delete()     
+        context['default'] = 'search'
+    
+    elif 'confirm' in request.POST:
+        for dok_id in request.POST.getlist('pick'):
+            conf_dok = Dokument.objects.get(id=dok_id)
+            conf_dok.uzytkownik = request.user
+            conf_dok.status = 'ZT'
+            conf_dok.data_ksiegowania = datetime.datetime.now()
+            conf_dok.save()   
+            change_balance(conf_dok.jednostka, conf_dok.wplyw, conf_dok.wydatek)
+    
+    else:
+        if (request.user.is_staff or request.user.is_admin):
+            dokumenty = Dokument.objects.filter(status='ZG')
+        else:
+            jednostki = request.user.jednostka.all().order_by('nazwa')
+            dokumenty = Dokument.objects.filter(status='ZG', jednostka__in=jednostki)
+        context['dokumenty'] = dokumenty
+        
+    return render(request, 'core/docs_confirm.html', context)
+
+def register_docs(request):
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    
+    def validate_data(request):        
+        # walidacja danych, w przypadku znalezienia bledu
+        # jest on dodawany do listy error_log, ktora jest
+        # potem przekazywana do html w celu wyswietlenia komunikatu bledu
+        error_log = []
+        
+        if not (re.search('^\d{4}-[0-1]\d-[0-3]\d$', request.POST['data_dokumentu'])): error_log.append('data_dokumentu')  
+        if not request.POST['numer']: error_log.append('numer')
+        if not request.POST['opis']: error_log.append('opis')
+        if not (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['wplyw'])): error_log.append('kwota')
+        if not (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['wydatek'])): error_log.append('kwota')
+        # jezeli format kwoty sie zgadza sprawdza czy wplyw XOR wydatek
+        if 'kwota' not in error_log:
+            if (request.POST['wplyw'] == '' and request.POST['wydatek'] == ''): error_log.append('kwota_brak')
+            elif (request.POST['wplyw'] == '' or request.POST['wydatek'] == ''): pass
+            elif (float(request.POST['wplyw'].replace(',', '.')) and float(request.POST['wydatek'].replace(',', '.'))): error_log.append('kwota_oba')    
+        
+        return error_log 
+    
+    def register_document(request):
+               
+        jednostka = Jednostka.objects.get(id=request.POST['jednostka'])
+        
+        # ustaw wplyw/wydatek na 0.0 jezeli pozostal nieywpelniony
+        wplyw   = 0.0 if request.POST['wplyw'] == '' else request.POST['wplyw'].replace(',', '.')
+        wydatek = 0.0 if request.POST['wydatek'] == '' else request.POST['wydatek'].replace(',', '.')
+        
+        dokument = Dokument(data_dokumentu=request.POST['data_dokumentu'], typ='FV', numer=request.POST['numer'], opis=request.POST['opis'], wplyw=wplyw, 
+                            wydatek=wydatek, jednostka=jednostka, uzytkownik=request.user, uzytkownik_zglaszajacy=request.user, status='ZG')        
+        dokument.save()
+        
+        # dodwanie etykiet
+        etykiety = [ Etykieta.objects.get(id=ety) for ety in request.POST.getlist('etykiety') ]
+        dokument.etykiety.add(*etykiety)
+         
+    if request.method == 'POST':
+        error_log = validate_data(request)
+        if not error_log:
+            register_document(request)
+    else:
+        error_log = []
+    
+    etykiety  = Etykieta.objects.all()
+    jednostki = request.user.jednostka.all().order_by('nazwa')
+    context   = {'error_log':error_log, 'jednostki': jednostki, 'etykiety':etykiety}
+    
+    return render(request, 'core/register_docs.html', context)
 
 def auth_login(request):
     

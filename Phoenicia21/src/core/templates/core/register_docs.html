@@ -1,0 +1,90 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="container">
+	<h1><span class="glyphicon glyphicon-file"></span> Zgłoś fakturę</h1>
+	
+	<div class="row">
+		<div class="col-lg-6">
+		
+			<form class="form-horizontal" action="register_docs" method="post">{% csrf_token %}
+				<!--  WYSWIETLANIE KOMUNIKATU BLEDU -->
+				{% if error_log %}
+				<div class="alert alert-danger" role="alert">
+				{% if "data_dokumentu" in error_log %}
+				Proszę wpisać datę w formacie RRRR-MM-DD<br />
+				{% endif %}
+				
+				{% if "numer" in error_log %}
+				Proszę wpisać numer dokumentu<br />
+				{% endif %}
+				
+				{% if "opis" in error_log %}
+				Proszę wpisać opis dokumentu<br />
+				{% endif %}
+				
+				{% if "kwota" in error_log %}
+				Proszę wprowadzić prawidłową kwotę lub pozostawić puste pole<br />
+				{% endif %}
+				
+				{% if "kwota_oba" in error_log %}
+				Pola wpływ i wydatek nie mogą być jednocześnie większe od 0.00<br />
+				{% endif %}
+				
+				{% if "kwota_brak" in error_log %}
+				Pola wpływ i wydatek nie mogą być jednocześnie równe 0.00 lub puste<br />
+				{% endif %}
+				
+				</div>
+				{% endif %}
+				<!-- KONIEC KOMUNIKATU BLEDU -->
+				
+			    <div class="form-group">
+			        <label class="control-label col-lg-3">Data dokumentu</label>
+			        <div class="col-lg-9"><input type="date" class="form-control" name="data_dokumentu"></div>
+			    </div>
+			    
+			    <div class="form-group">
+			        <label class="control-label col-lg-3">Numer</label>
+			        <div class="col-lg-9"><input type="text" class="form-control" name="numer"></div>
+			    </div>
+			    
+			    <div class="form-group">
+			        <label class="control-label col-lg-3">Opis</label>
+			        <div class="col-lg-9"><input type="text" class="form-control" name="opis"></div>
+			    </div>
+			    
+			    <div class="form-group">
+			        <label class="control-label col-lg-3">Wpływ</label>
+			        <div class="col-lg-9"><input type="text" class="form-control" name="wplyw"></div>
+			    </div>
+			    
+			    <div class="form-group">
+			        <label class="control-label col-lg-3">Wydatek</label>
+			        <div class="col-lg-9"><input type="text" class="form-control" name="wydatek"></div>
+			    </div>
+
+			    <div class="form-group">
+			        <label class="control-label col-lg-3">Etykiety</label>
+			        <div class="col-lg-9"><select multiple class="form-control" name="etykiety">
+						{% for et in etykiety %}<option value="{{ et.id }}">{{ et }}</option>{% endfor %}
+					</select></div>
+			    </div>
+			    
+			    <div class="form-group">
+			        <label class="control-label col-lg-3">Jednostka</label>
+			        <div class="col-lg-9"><select class="form-control" name="jednostka">
+						{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+					</select></div>
+			    </div>
+    
+			    <div class="form-group">
+			        <div class="col-lg-offset-3 col-lg-9"><button type="submit" class="btn btn-primary">Zgłoś</button></div>
+			    </div>
+			</form>
+			
+		</div>
+	</div>
+</div>
+
+{% endblock %}

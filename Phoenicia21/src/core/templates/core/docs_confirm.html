@@ -1,0 +1,207 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="col-lg-12">
+
+<!-- WYSWIETLANIE DOKUMENTOW -->
+<div class="panel panel-default">
+
+{% if dokumenty %}
+  {% if request.user.is_staff or request.user.is_admin %}
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-saved"></span> Zatwierdzanie faktur </h3></div>
+  {% else %}
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-list"></span> Faktury zgłoszone dla Twoich jednostek </h3></div>
+  {% endif %}
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="docs_confirm" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+      <th></th>
+	  <th>Data dokumentu</th>
+	  <th>Data księgowania</th>
+	  <th>Typ</th>
+	  <th>Numer</th>
+	  <th>Opis</th>
+	  <th>Wpływ</th>
+	  <th>Wydatek</th>
+	  <th>Etykiety</th>
+	  <th>Jednostka</th>
+	  
+  </tr></thead>
+  
+  <tbody>
+  
+  {% for dok in dokumenty %}
+  <tr>
+  
+  <td><input type="checkbox" name="pick" value="{{ dok.id }}"></td>
+  
+  <td>{{ dok.data_dokumentu|date:"Y-m-d" }}</td>
+  <td>{{ dok.data_ksiegowania|date:"Y-m-d" }}</td>
+  <td>{{ dok.get_typ_display }}</td>
+  <td>{{ dok.numer }}</td>
+  <td>{{ dok.opis }}</td>
+  <td>{{ dok.wplyw }}</td>
+  <td>{{ dok.wydatek }}</td>
+  <td>{% for ety in dok.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ dok.jednostka }}</td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </div>
+      <div class="form-group">
+      <div class="col-lg-9">
+            <button type="submit" class="btn btn-primary" name="edit">Edytuj</button>
+            <button type="submit" class="btn btn-primary" name="reject">Odrzuć</button>
+            {% if request.user.is_staff or request.user.is_admin %}
+            <button type="submit" class="btn btn-primary" name="confirm">Zatwierdź</button>
+            {% endif %}
+    </div></div>
+  </form>  
+
+<!-- EDYCJA DOKUMENTOW -->
+
+{% elif edytowane_dokumenty %}
+ 
+ <div class="panel-heading"><h3><span class="glyphicon glyphicon-pencil"></span> Edycja danych</h3></div>
+ {%  if error_log %}
+ <div class="alert alert-danger " role="alert">Proszę poprawić dane w poniższych dokumentach:</div>
+ {% endif %}
+ 
+ <!-- Table -->
+  <table class="table">
+  <th>Data dokumentu</th>
+  <th>Typ</th>
+  <th>Numer</th>
+  <th>Opis</th>
+  <th>Wpływ</th>
+  <th>Wydatek</th>
+  <th>Etykiety</th>
+  <th>Jednostka</th>
+  
+  <form class="form-inline" role="form" action="docs_confirm" method="post">{% csrf_token %}
+  {% for dok in edytowane_dokumenty %} 
+  <tr>
+  <input type='hidden' name="pick" value="{{ dok.id }}" />
+  <td><div class="form-group"><input type="date" class="form-control" name="data_dokumentu" value="{{ dok.data_dokumentu|date:"Y-m-d" }}"></div></td>
+  <td><div class="form-group"><select class="form-control" name="typ">
+  {% for id, value in typy_dokumentow %}<option value="{{ id }}"{% if id == dok.typ %} selected="selected" {% endif %}>{{ value }}</option>{% endfor %}
+  </select></div></td>
+  <td><div class="form-group"><input type="text" class="form-control" name="numer" value="{{ dok.numer }}"></div></td>  
+  <td><div class="form-group"><input type="text" class="form-control" name="opis" value="{{ dok.opis }}"></div></td>
+  <td><div class="form-group"><input type="text" class="form-control" name="wplyw" value="{{ dok.wplyw }}"></div></td>
+  <td><div class="form-group"><input type="text" class="form-control" name="wydatek" value="{{ dok.wydatek }}"></div></td>
+  <td><div class="form-group"><select multiple class="form-control" name="etykiety{{dok.id}}">
+  {% for ety in etykiety %}<option value="{{ ety.id }}" {% if ety in dok.etykiety.all %} selected="selected" {% endif %}>{{ ety }}</option>{% endfor %}
+  </select></div></td>
+  <td><div class="form-group"><select class="form-control" name="jednostka">
+  {% for jed in jednostki %}<option value="{{ jed.id }}" {% if jed == dok.jednostka %} selected="selected" {% endif %}>{{ jed }}</option>{% endfor %}
+  </select></div></td>
+  </tr>
+  {% endfor %}
+  </table>
+  </div>  
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="change">Zmień</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+  
+<!-- USUWANIE DOKUMENTOW -->
+
+{% elif usuwane_dokumenty %}
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-remove"></span> Zostaną odrzucone dokumenty:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th>Data dokumentu</th>
+  <th>Data księgowania</th>
+  <th>Typ</th>
+  <th>Numer</th>
+  <th>Opis</th>
+  <th>Wpływ</th>
+  <th>Wydatek</th>
+  <th>Etykiety</th>
+  <th>Jednostka</th>
+  
+  <form class="form-inline" role="form" action="docs_confirm" method="post">{% csrf_token %}
+  
+  {% for dok in usuwane_dokumenty %}
+  <tr>
+  <input type='hidden' name="pick" value="{{ dok.id }}" />
+  <td>{{ dok.data_dokumentu|date:"Y-m-d" }}</td>
+  <td>{{ dok.data_ksiegowania|date:"Y-m-d" }}</td>
+  <td>{{ dok.get_typ_display }}</td>
+  <td>{{ dok.numer }}</td>
+  <td>{{ dok.opis }}</td>
+  <td>{{ dok.wplyw }}</td>
+  <td>{{ dok.wydatek }}</td>
+  <td>{% for ety in dok.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ dok.jednostka }}</td>
+  </tr>
+  {% endfor %}
+  
+  </table>
+  </div>
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="reject_confirm">Potwierdź</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+
+<!-- DODAWANIE DOKUMENTOW DO RAPORTU -->
+
+{% elif dokumenty_do_dodania %}
+
+<div class="panel-heading"><h3><span class="glyphicon glyphicon-paperclip"></span> Wybierz raport:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th></th>
+  <th>Miesiąc</th>
+  <th>Rok</th>
+  <th>Saldo początkowe</th>
+  <th>Saldo końcowe</th>
+  <th>Pierwszy numer</th>
+  <th>Ostatni numer</th>
+  <th>Status</th>
+  
+  <form class="form-inline" role="form" action="docs_search" method="post">{% csrf_token %}
+  
+  {% for raport in raporty %}
+  <tr>
+  <td><input type='radio' name="raport" value="{{ raport.id }}" /></td>
+  <td>{{ raport.miesiac }}</td>
+  <td>{{ raport.rok }}</td>
+  <td>{{ raport.saldo_start }}</td>
+  <td>{{ raport.saldo_stop }}</td>
+  <td>{{ raport.numer_start }}</td>
+  <td>{{ raport.numer_stop }}</td>
+  <td>{{ raport.get_status_display }}</td>
+  </tr>
+  {% endfor %}
+  
+  {% for dok in dokumenty_do_dodania %}
+  <input type='hidden' name="pick" value="{{ dok.id }}" />
+  {% endfor %}
+  
+  </table>
+  </div>
+  <div class="form-group">
+  <div class="col-lg-9">
+          <button type="submit" class="btn btn-primary" name="add_to_report_confirm">Potwierdź</button>
+          <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+  </div></div>
+  </form>
+
+{% endif %}
+
+</div>
+
+{% endblock %}

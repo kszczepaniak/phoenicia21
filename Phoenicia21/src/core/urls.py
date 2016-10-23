@@ -7,6 +7,7 @@ urlpatterns = [
     url(r'main$', views.main, name='main'),
     url(r'docs_add$', views.docs_add, name='docs_add'),
     url(r'docs_search$', views.docs_search, name='docs_search'),
+    url(r'docs_confirm$', views.docs_confirm, name='docs_confirm'),
     url(r'operations_view$', views.operations_view, name='operations_view'),
     url(r'operations_transfer$', views.operations_transfer, name='operations_transfer'),
     url(r'operations_bank$', views.operations_bank, name='operations_bank'),
@@ -27,4 +28,5 @@ urlpatterns = [
     url(r'invoices$', views.invoices, name='invoices'),
     url(r'invoices_upload$', views.invoices_upload, name='invoices_upload'),
     url(r'invoices_single$', views.invoices_single, name='invoices_single'),
+    url(r'register_docs$', views.register_docs, name='register_docs'),
 ]
