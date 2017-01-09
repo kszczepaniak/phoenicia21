@@ -13,6 +13,7 @@
 	  <th>Nazwa</th>
 	  <th>Typ</th>
 	  <th>Saldo</th>
+	  <th>Saldo pomniejszone o zaliczki</th>
 	  <th>Aktywna</th>
   </tr></thead>
   
@@ -22,7 +23,8 @@
   <tr>
   <td>{{ jed.nazwa }}</td>
   <td>{{ jed.get_typ_jednostki_display }}</td>
-  <td>{{ jed.saldo }}</td>
+  <td class="{% if jed.saldo < 0 %}danger{% endif %}">{{ jed.saldo }}</td>
+  <td class="{% if jed.balance_with_accounts < 0 %}danger{% endif %}">{{ jed.balance_with_accounts }}</td>
   <td>{% if jed.aktywna == True %}Tak{% else %}Nie{% endif %}</td>
   </tr>
   {% endfor %}

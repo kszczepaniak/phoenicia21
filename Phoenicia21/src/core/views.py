@@ -3,7 +3,8 @@ from django.shortcuts import render, redirect
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate, login, logout
-from core.models import Dokument, Uzytkownik, Jednostka, Hufiec, RaportKasowy, BilansOtwarcia, Etykieta, Dekret, OperacjaSalda, Faktura, NumeracjaFaktur, SposobPlatnosci
+from core.models import Dokument, Uzytkownik, Jednostka, Hufiec, RaportKasowy, BilansOtwarcia, Etykieta, Dekret, OperacjaSalda, Faktura, NumeracjaFaktur, SposobPlatnosci,\
+    Zaliczka
 import re, decimal, datetime, random, string
 # reportlab imports
 from reportlab.pdfgen import canvas
@@ -192,7 +193,7 @@ def docs_search(request):
             kwota_stop = decimal.Decimal((request.POST['kwota_stop']))
         args = ( Q( wplyw__range = (kwota_start, kwota_stop) ) | Q( wydatek__range = (kwota_start, kwota_stop) ), )    
                 
-        dokumenty = Dokument.objects.filter(*args, **kwargs)   
+        dokumenty = Dokument.objects.filter(*args, **kwargs).order_by('data_dokumentu').reverse()   
         return dokumenty
 
     def change_document(request, dok):
@@ -294,9 +295,9 @@ def docs_search(request):
     # wyswietla liste raportow i pozwala dodac dokumenty do wybranego
     elif 'add_to_report' in request.POST:    
         dokumenty = [ Dokument.objects.get(id=doc_id) for doc_id in request.POST.getlist('pick') ]
-        raporty = RaportKasowy.objects.order_by('rok', 'miesiac')
+        raporty   = RaportKasowy.objects.order_by('rok', 'miesiac').reverse()
         
-        context['raporty'] = raporty 
+        context['raporty']              = raporty 
         context['dokumenty_do_dodania'] = dokumenty
     
     # wykonanie operacji dodania dokumentow do raportu
@@ -306,6 +307,23 @@ def docs_search(request):
         for dok_id in request.POST.getlist('pick'):    
             dok = Dokument.objects.get(id=dok_id)
             dok.raport_kasowy = raport
+            dok.save()
+    
+    # wyswietla liste aktywnych zaliczek i pozwala dodac dokumenty do wybranej
+    elif 'add_to_account' in request.POST:
+        dokumenty        = [ Dokument.objects.get(id=doc_id) for doc_id in request.POST.getlist('pick') ]
+        zaliczki_aktywne = Zaliczka.objects.filter(status='AKT')
+        
+        context['zaliczki_aktywne']       = zaliczki_aktywne
+        context['dokumenty_do_podpiecia'] = dokumenty
+        
+    # wykonanie operacji dodania dokumentow do zaliczki
+    elif 'add_to_account_confirm' in request.POST:
+        zaliczka = Zaliczka.objects.get(id=request.POST['wybrana_aktywna'])
+        
+        for dok_id in request.POST.getlist('dokumenty_do_zaliczki'):
+            dok = Dokument.objects.get(id=dok_id)
+            dok.zaliczka = zaliczka
             dok.save()
             
     else:
@@ -480,6 +498,81 @@ def register_docs(request):
     context   = {'error_log':error_log, 'jednostki': jednostki, 'etykiety':etykiety}
     
     return render(request, 'core/register_docs.html', context)
+
+def account_add(request):
+    
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    elif not (request.user.is_staff or request.user.is_admin):
+        return redirect('access_denied') 
+
+    def validate_data(request):        
+        # walidacja danych, w przypadku znalezienia bledu
+        # jest on dodawany do listy error_log, ktora jest
+        # potem przekazywana do html w celu wyswietlenia komunikatu bledu
+        error_log = []
+        
+        if not request.POST['tytul']: error_log.append('tytul')
+        if not (re.search('^\d{4}-[0-1]\d-[0-3]\d$', request.POST['termin_rozliczenia'])): error_log.append('termin_rozliczenia')
+        if (not (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['kwota'])) or request.POST['kwota'] == ''): error_log.append('kwota')
+        if request.POST['jednostka'] == '-1': error_log.append('jednostka')    
+        
+        return error_log 
+
+    def add_account(request):
+        
+        jednostka   = Jednostka.objects.get(id=request.POST['jednostka'])
+        pobierajacy = Uzytkownik.objects.get(id=request.POST['pobierajacy'])
+               
+        zaliczka = Zaliczka(termin_rozliczenia=request.POST['termin_rozliczenia'], tytul=request.POST['tytul'], pobierajacy=pobierajacy, wystawiajacy=request.user,
+                            jednostka=jednostka, kwota=request.POST['kwota'].replace(',', '.'), status='AKT')
+        zaliczka.save()
+    
+    # dane potrzebne do formularza dodawania
+    uzytkownicy = Uzytkownik.objects.all().order_by('nazwisko')
+    jed2nazwa   = { jed.id:jed.nazwa for jed in Jednostka.objects.all() }
+    uzyt2jed    = { uzyt.id:[ jed.id for jed in uzyt.jednostka.all() ] for uzyt in uzytkownicy }
+    
+    if request.method == 'POST':
+        error_log = validate_data(request)
+        if not error_log:
+            add_account(request)
+    else:
+        error_log = []    
+    
+    context = {'error_log':error_log, 'uzytkownicy':uzytkownicy, 'uzyt2jed':uzyt2jed, 'jed2nazwa':jed2nazwa}
+    return render(request, 'core/account_add.html', context)
+
+def account_view(request):
+    
+    if not request.user.is_authenticated():
+        return redirect('auth_login')
+    elif not (request.user.is_staff or request.user.is_admin):
+        jednostki           = request.user.jednostka.all()
+        zaliczki_aktywne    = Zaliczka.objects.filter(status='AKT', jednostka__in=jednostki)
+        zaliczki_rozliczone = Zaliczka.objects.filter(status='ROZ', jednostka__in=jednostki)
+    else: 
+        zaliczki_aktywne    = Zaliczka.objects.filter(status='AKT')
+        zaliczki_rozliczone = Zaliczka.objects.filter(status='ROZ')
+        
+    context = {'zaliczki_aktywne':zaliczki_aktywne, 'zaliczki_rozliczone':zaliczki_rozliczone}
+    
+    if 'delete' in request.POST:
+        zaliczka = Zaliczka.objects.get(id=request.POST['wybrana_aktywna'])
+        zaliczka.delete()
+        
+    elif 'resolve' in request.POST:
+        zaliczka           = Zaliczka.objects.get(id=request.POST['wybrana_aktywna'])
+        dokumenty_zaliczki = zaliczka.dokument_set.all() 
+        context['zaliczka_rozliczana'] = zaliczka
+        context['dokumenty_zaliczki']  = dokumenty_zaliczki
+        
+    elif 'resolve_confirm' in request.POST:
+        zaliczka = Zaliczka.objects.get(id=request.POST['zaliczka_id'])
+        zaliczka.status = 'ROZ'
+        zaliczka.save()
+    
+    return render(request, 'core/account_view.html', context)
 
 def auth_login(request):
     
@@ -868,7 +961,7 @@ def reports_cash(request):
         
         return response 
     
-    raporty = RaportKasowy.objects.order_by('rok', 'miesiac')
+    raporty = RaportKasowy.objects.order_by('rok', 'miesiac').reverse()
     
     lata = RaportKasowy.objects.order_by().values('rok').distinct()
     
@@ -1030,7 +1123,7 @@ def operations_view(request):
             kwota_stop = decimal.Decimal((request.POST['kwota_stop']))
         kwargs['kwota__range'] = (kwota_start, kwota_stop)    
                 
-        operacje = OperacjaSalda.objects.filter(*args, **kwargs)   
+        operacje = OperacjaSalda.objects.filter(*args, **kwargs).order_by('data_operacji').reverse()   
         
         return operacje
         

@@ -38,11 +38,12 @@
 	    <script>
 		$(document).ready( function () {
 		    $('#show_docs').DataTable( {searching: false, ordering:  false, "lengthChange": false, "iDisplayLength": 15,
-		    	"oLanguage": { "sInfo": "Znaleziono wyników: _TOTAL_ (pokazuję od _START_ do _END_)", 
-		    	      "oPaginate": {
-		    	        "sNext": "Następna", "sPrevious": "Poprzednia"
-		    	      }
-		    	    }
+		    	"oLanguage": { "sInfo": "Znaleziono wyników: _TOTAL_ (pokazuję od _START_ do _END_)", "sEmptyTable": "Brak danych w tabeli", "sInfoEmpty": "Brak wyników do pokazania",
+		    	      "oPaginate": { "sNext": "Następna", "sPrevious": "Poprzednia" }}
+		    	});
+		    $('#aux_table').DataTable( {searching: false, ordering:  false, "lengthChange": false, "iDisplayLength": 15,
+		    	"oLanguage": { "sInfo": "Znaleziono wyników: _TOTAL_ (pokazuję od _START_ do _END_)", "sEmptyTable": "Brak danych w tabeli", "sInfoEmpty": "Brak wyników do pokazania",
+		    	      "oPaginate": {"sNext": "Następna", "sPrevious": "Poprzednia"}}
 		    	});
 			} );
 		</script> 
@@ -81,7 +82,9 @@
 		            <li><a href="docs_search">Szukaj</a></li>
 		            <li><a href="docs_add">Dodaj</a></li>
 		            <li><a href="docs_confirm">Zatwierdź</a></li>
-		            <li><a href="#">Zaliczki</a></li>
+                    <li role=separator class=divider></li>
+		            <li><a href="account_view">Zaliczki</a></li>
+		            <li><a href="account_add">Wystaw zaliczkę</a></li>
 		          </ul>
 		        </li>
 		        
@@ -114,7 +117,7 @@
 		          </ul>
 		        </li>
 		        
-		        <li><a href="https://docs.google.com/folderview?id=0B4hUkplS1WlNaTRKVzA1TGpoRFU&usp=drive_web&tid=0B9d12whtcnm-YzE4ZTQ4MDktOTAwNy00NTFmLWFmODctYjdjNzYxZWUzYzQy">Materiały</a></li>
+		        <li><a href="https://drive.google.com/drive/folders/0B4hUkplS1WlNWDZpWWc1Sy1fYlE">Materiały</a></li>
 		        
 		        {% if request.user.is_admin %}
 		        <li class="dropdown">
@@ -134,6 +137,7 @@
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Podgląd <span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
 		            <li><a href="docs_search">Dokumenty</a></li>
+		            <li><a href="account_view">Zaliczki</a></li>
 		            <li><a href="operations_view">Operacje</a></li>
 		            <li><a href="docs_confirm">Zgłoszenia</a></li>
 		            <li><a href="invoices">Faktury</a></li>

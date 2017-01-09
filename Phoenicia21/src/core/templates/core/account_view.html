@@ -1,0 +1,203 @@
+{% extends "core/main.html" %}
+{% block content %}
+
+<div class="col-lg-12">
+
+<!--  WYSWIETLANIE KOMUNIKATU BLEDU -->
+{% if error_log_delete %}
+<div class="alert alert-danger" role="alert">	
+Jedna lub więcej z wybranych faktur jest już zatwierdzona i nie może być usunięta.			
+</div>
+{% endif %}
+<!-- KONIEC KOMUNIKATU BLEDU -->
+
+<div class="panel panel-default">
+
+<!-- PODGLAD ZALICZEK -->
+
+{% if not zaliczka_rozliczana %}
+  
+  
+    <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#aktywne" aria-controls="home" role="tab" data-toggle="tab">Aktywne</a></li>
+    <li role="presentation"><a href="#rozliczone" aria-controls="profile" role="tab" data-toggle="tab">Rozliczone</a></li>
+  </ul>
+
+  <!-- Tab panes -->
+<div class="tab-content">
+<div role="tabpanel" class="tab-pane active" id="aktywne">
+  
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-folder-open"></span> Zestawienie zaliczek: aktywne </h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="account_view" method="post">{% csrf_token %}
+  <table id="show_docs" class="table">
+  <thead><tr>
+      {% if request.user.is_staff or request.user.is_admin %}<th></th>{% endif %}  
+	  <th>Data wystawienia</th>
+	  <th>Termin rozliczenia</th>
+	  <th>Kwota</th>
+	  <th>Tytuł</th>
+	  <th>Status</th>
+	  <th>Pobierający</th>
+	  <th>Wystawiający</th>
+	  <th>Jednostka</th>
+  </tr></thead>
+  
+  <tbody>
+  {% for zal in zaliczki_aktywne %}
+  <tr>
+  {% if request.user.is_staff or request.user.is_admin %}<td><input type="radio" name="wybrana_aktywna" value="{{ zal.id }}"></td>{% endif %}
+  <td>{{ zal.data_wystawienia|date:"Y-m-d" }}</td>
+  <td>{{ zal.termin_rozliczenia|date:"Y-m-d" }}</td>
+  <td>{{ zal.kwota }}</td>
+  <td>{{ zal.tytul }}</td>
+  <td class="{% if zal.is_past_due %}danger{% elif zal.status == 'AKT' %}warning{% elif zal.status == 'ROZ' %}success{% endif %}">{{ zal.get_status_display }}{% if zal.is_past_due %} - po terminie{% endif %}</td>
+  <td>{{ zal.pobierajacy }}</td>
+  <td>{{ zal.wystawiajacy }}</td>
+  <td>{{ zal.jednostka }}</td>
+  </tr>
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  
+    {% if request.user.is_staff or request.user.is_admin %}
+      <div class="form-group">
+      <div class="col-xs-9">
+            <button type="submit" class="btn btn-primary" name="resolve">Rozlicz</button>
+            <button type="submit" class="btn btn-primary" name="delete">Usuń</button>
+    </div></div>
+    {% endif %}
+  </form></div>
+    
+<div role="tabpanel" class="tab-pane" id="rozliczone">
+   <div class="panel-heading"><h3><span class="glyphicon glyphicon-folder-close"></span> Zestawienie zaliczek: rozliczone </h3></div>
+  
+  <!-- Table -->
+  <form class="form-horizontal" action="account_view" method="post">{% csrf_token %}
+  <table id="aux_table" class="table">
+  <thead><tr>
+	  <th>Data wystawienia</th>
+	  <th>Termin rozliczenia</th>
+	  <th>Kwota</th>
+	  <th>Tytuł</th>
+	  <th>Status</th>
+	  <th>Pobierający</th>
+	  <th>Wystawiający</th>
+	  <th>Jednostka</th>
+	  <th>Dokumenty rozliczające</th>
+  </tr></thead>
+  
+  <tbody>
+  {% for zal in zaliczki_rozliczone %}
+  <tr>
+  <td>{{ zal.data_wystawienia|date:"Y-m-d" }}</td>
+  <td>{{ zal.termin_rozliczenia|date:"Y-m-d" }}</td>
+  <td>{{ zal.kwota }}</td>
+  <td>{{ zal.tytul }}</td>
+  <td class="{% if zal.status == 'AKT' %}warning{% elif zal.status == 'ROZ' %}success{% endif %}">{{ zal.get_status_display }}</td>
+  <td>{{ zal.pobierajacy }}</td>
+  <td>{{ zal.wystawiajacy }}</td>
+  <td>{{ zal.jednostka }}</td>
+  <td><button type="button" class="btn btn-primary btn" data-toggle="modal" data-target="#modal{{zal.id}}">Pokaż</button>
+  <div class="modal fade bs-example-modal-lg" id="modal{{zal.id}}" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Zaliczka {{zal.tytul}}</h4>
+      </div>
+      <div class="modal-body">
+        <table class="table">
+		  <th>Data dokumentu</th>
+		  <th>Typ</th>
+		  <th>Numer</th>
+		  <th>Opis</th>
+		  <th>Wpływ</th>
+		  <th>Wydatek</th>
+		  <th>Jednostka</th>
+		  {% for dok in zal.dokument_set.all %}
+		  <tr>
+		  <td>{{ dok.data_dokumentu|date:"Y-m-d" }}</td>
+		  <td>{{ dok.get_typ_display }}</td>
+		  <td>{{ dok.numer }}</td>
+		  <td>{{ dok.opis }}</td>
+		  <td>{{ dok.wplyw }}</td>
+		  <td>{{ dok.wydatek }}</td>
+		  <td>{{ dok.jednostka }}</td>
+		  </tr>
+		  {% endfor %}
+		</table>
+
+      </div>
+    </div>
+  </div>
+</div></td>
+  </tr>
+  
+
+  
+  {% endfor %}
+  
+  </tbody>
+  </table>
+  </form></div>
+
+  </div></div>
+
+{% elif zaliczka_rozliczana %}
+</div>
+<div class="alert alert-info" role="alert">
+<h3>Zostanie rozliczona zaliczka o tytule: {{ zaliczka_rozliczana.tytul }} </h3><br />
+<h4>Pobrana przez: {{ zaliczka_rozliczana.pobierajacy }} ( {{ zaliczka_rozliczana.jednostka }}) <br />
+Kwota: {{ zaliczka_rozliczana.kwota }} <br />
+Data wystawienia: {{ zaliczka_rozliczana.data_wystawienia|date:"Y-m-d" }}
+</h4>
+
+  <div class="panel-heading"><h3><span class="glyphicon glyphicon-paperclip"></span> Do zaliczki są podpięte następujące dokumenty:</h3></div>
+  
+ <!-- Table -->
+  <table class="table">
+  <th>Data dokumentu</th>
+  <th>Data księgowania</th>
+  <th>Typ</th>
+  <th>Numer</th>
+  <th>Opis</th>
+  <th>Wpływ</th>
+  <th>Wydatek</th>
+  <th>Etykiety</th>
+  <th>Jednostka</th>
+  
+  {% for dok in dokumenty_zaliczki %}
+  <tr>
+  <td>{{ dok.data_dokumentu|date:"Y-m-d" }}</td>
+  <td>{{ dok.data_ksiegowania|date:"Y-m-d" }}</td>
+  <td>{{ dok.get_typ_display }}</td>
+  <td>{{ dok.numer }}</td>
+  <td>{{ dok.opis }}</td>
+  <td>{{ dok.wplyw }}</td>
+  <td>{{ dok.wydatek }}</td>
+  <td>{% for ety in dok.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
+  <td>{{ dok.jednostka }}</td>
+  </tr>
+  {% endfor %}
+  </table>
+
+<form class="form-horizontal" action="account_view" method="post">{% csrf_token %}
+	<input type='hidden' name="zaliczka_id" value="{{ zaliczka_rozliczana.id }}" />
+    <div class="form-group">
+    <div class="col-xs-9">
+        <button type="submit" class="btn btn-success" name="resolve_confirm">Potwierdź</button>
+        <button type="submit" class="btn btn-primary" name="cancel">Anuluj</button>
+    </div></div>
+</form>
+
+</div>
+
+{% endif %}
+
+</div></div>
+
+{% endblock %}

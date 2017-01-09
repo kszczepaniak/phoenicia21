@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from datetime import date
 
 class Etykieta(models.Model):
     nazwa     = models.CharField(max_length=30)
@@ -40,7 +41,7 @@ class Dokument(models.Model):
     wplyw                  = models.DecimalField(max_digits=10, decimal_places=2)
     wydatek                = models.DecimalField(max_digits=10, decimal_places=2)
     etykiety               = models.ManyToManyField(Etykieta) 
-    #zaliczka          = models.ForeignKey('Account', blank=True, null=True)
+    zaliczka               = models.ForeignKey('Zaliczka', blank=True, null=True)
     uzytkownik             = models.ForeignKey('Uzytkownik')
     jednostka              = models.ForeignKey('Jednostka')
     #hufiec               = models.ForeignKey('Hufiec')
@@ -54,6 +55,25 @@ class Dokument(models.Model):
         (ZATWIERDZONA, 'Zatwierdzona'),
     )
     status = models.CharField(max_length=2, choices=STATUS_CHOICES) 
+
+class Zaliczka(models.Model):
+    data_wystawienia   = models.DateField(auto_now_add=True)                  # data wprowadzenia do systemu
+    termin_rozliczenia = models.DateField()
+    tytul              = models.CharField(max_length=80)
+    pobierajacy        = models.ForeignKey('Uzytkownik')
+    wystawiajacy       = models.ForeignKey('Uzytkownik', related_name='wystawiajacy')
+    jednostka          = models.ForeignKey('Jednostka')
+    kwota              = models.DecimalField(max_digits=10, decimal_places=2)
+    AKTYWNA    = 'AKT'
+    ROZLICZONA = 'ROZ'
+    STATUS_CHOICES = (
+        (AKTYWNA, 'Aktywna'),
+        (ROZLICZONA, 'Rozliczona'),
+    )
+    status = models.CharField(max_length=3, choices=STATUS_CHOICES)
+    
+    def is_past_due(self):
+        return date.today() > self.termin_rozliczenia
 
 class Dekret(models.Model):
     numer = models.CharField(max_length=16)
@@ -110,6 +130,9 @@ class Jednostka(models.Model):
     
     def __str__(self):
         return self.nazwa
+    
+    def balance_with_accounts(self):
+        return self.saldo - sum(zal.kwota for zal in self.zaliczka_set.filter(status='AKT'))
     
 class UserManager(BaseUserManager):
     def create_user(self, login, password, imie, nazwisko, email, hufiec, jednostka):
