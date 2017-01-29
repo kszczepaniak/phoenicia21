@@ -753,13 +753,18 @@ def admin_units(request):
         return redirect('access_denied')
 
     jednostki = Jednostka.objects.all()
-    context = {'jednostki': jednostki, 'typy_jednostek': Jednostka.TYP_JEDNOSTKI_CHOICES}
+    hufce     = Hufiec.objects.all().order_by('nazwa')
+    context = {'jednostki': jednostki, 'typy_jednostek': Jednostka.TYP_JEDNOSTKI_CHOICES, 'hufce':hufce}
     
     if 'add' in request.POST:
         aktywna = True if 'aktywna' in request.POST else False
+        if request.POST['hufiec']:
+            hufiec  = Hufiec.objects.get(id=request.POST['hufiec'])
+        else:
+            hufiec = request.user.hufiec
                 
         jednostka = Jednostka(nazwa=request.POST['nazwa'], saldo=request.POST['saldo'],
-                    typ_jednostki=request.POST['typ_jednostki'], aktywna=aktywna) 
+                    typ_jednostki=request.POST['typ_jednostki'], hufiec=hufiec, aktywna=aktywna) 
         jednostka.save()
         
     # wyswietla jednostki do edycji        

@@ -14,6 +14,7 @@
   <!-- Table -->
   <table class="table">
   <th>Nazwa</th>
+  <th>Hufiec</th>
   <th>Typ</th>
   <th>Saldo</th>
   <th>Aktywna</th>
@@ -23,6 +24,7 @@
   <tr>
   <input type='hidden' name="pick" value="{{ jed.id }}" />
   <td><div class="form-group"><input type="text" class="form-control" name="nazwa" value="{{ jed.nazwa }}"></div></td>
+  <td>{{ jed.hufiec }}</td>
   <td><div class="form-group"><select class="form-control" name="typ_jednostki">
   {% for id, value in typy_jednostek %}<option value="{{ id }}"{% if id == jed.typ_jednostki %} selected="selected" {% endif %}>{{ value }}</option>{% endfor %}
   </select></div></td>
@@ -81,6 +83,15 @@
 	</select></div>
 </div>
 
+{% if request.user.is_admin %}
+<div class="form-group">
+	<label class="control-label col-lg-2">Hufiec</label>
+	<div class="col-lg-3"><select class="form-control" name="hufiec">
+   		{% for huf in hufce %}<option value="{{ huf.id }}">{{ huf }}</option>{% endfor %}
+	</select></div>
+</div>
+{% endif %}
+
 <div class="form-group">
 	<label class="control-label col-lg-2">Saldo</label>
 	<div class="col-lg-3"><input type="text" class="form-control" name="saldo"></div>
@@ -113,6 +124,7 @@
   <thead><tr>
 	  <th></th>
 	  <th>Nazwa</th>
+	  <th>Hufiec</th>
 	  <th>Typ</th>
 	  <th>Saldo</th>
 	  <th>Aktywna</th>
@@ -126,6 +138,7 @@
     	<input type="checkbox" name="pick" value="{{ jed.id }}">
   </td>
   <td>{{ jed.nazwa }}</td>
+  <td>{{ jed.hufiec }}</td>
   <td>{{ jed.get_typ_jednostki_display }}</td>
   <td>{{ jed.saldo }}</td>
   <td>{% if jed.aktywna == True %}Tak{% else %}Nie{% endif %}</td>
