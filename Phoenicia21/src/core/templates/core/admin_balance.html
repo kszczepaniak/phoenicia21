@@ -1,7 +1,7 @@
 {% extends "core/main.html" %}
 {% block content %}
 
-<div class="col-lg-6">
+<div class="col-lg-8">
 
 <div class="panel-group" id="add">
   <div class="panel panel-default">
@@ -27,6 +27,11 @@
 		<div class="form-group">
 			<label class="control-label">Saldo</label><input type="text" class="form-control" name="saldo">
 		</div>
+		
+		<div class="form-group"><label class="control-label">Hufiec</label><select class="form-control" name="hufiec">
+  		{% for huf in hufce %}<option value="{{ huf.id }}">{{ huf }}</option>{% endfor %}
+  		</select></div>
+		
         <div class="form-group">
         <div class="col-lg-offset-2 col-lg-9">
             <button type="submit" class="btn btn-primary" name="add">Dodaj</button>
@@ -46,6 +51,7 @@
 	  <th></th>
 	  <th>Rok</th>
 	  <th>Saldo otwarcia</th>
+	  <th>Hufiec</th>
   </tr></thead>
   <tbody>
   {% for bilans in bilansy_otwarcia %}
@@ -55,6 +61,7 @@
   </td>
   <td>{{ bilans.rok }}</td>
   <td>{{ bilans.kwota }}</td>
+  <td>{{ bilans.hufiec }}</td>
   </tr>
   {% endfor %}
   </tbody>

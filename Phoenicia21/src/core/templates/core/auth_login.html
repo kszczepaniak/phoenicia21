@@ -58,9 +58,14 @@
    	<label class="sr-only">E-mail</label>
    	<input type="text" name="email" class="form-control" placeholder="E-mail">
    	
+   	<label class="sr-only">Hufiec</label>
+   	<select class="form-control" name="hufiec" onchange="changeUnitSet({{ huf2jed }}, this.value, {{ jed2nazwa }})">
+   		<option value="-1">Wybierz hufiec</option>{% for huf in hufce %}<option value="{{ huf.id }}">{{ huf }}</option>{% endfor %}
+	</select>   	
+   	
    	<label class="sr-only">Jednostka podstawowa</label>
-   	<select class="form-control" name="jednostka">
-   		<option value="0">Wybierz jednostkę</option>{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
+   	<select class="form-control" id="jednostka" name="jednostka">
+   		<option value="-1">Wybierz hufiec</option>
 	</select>
    	
    	<br />
@@ -121,5 +126,19 @@
 
 </div>
 </div> <!-- /container -->
+
+<script>
+function changeUnitSet(h2j, huf_id, j2n) {
+	$("#jednostka").empty(); // reset list of units
+	if (huf_id != -1) {
+		var units = h2j[huf_id]; // select only units of given user
+		$(units).each(function(i){
+			$("#jednostka").append("<option value="+units[i]+">"+j2n[units[i]]+"</option>") // fill list of units
+		});
+	} else {
+		$("#jednostka").append("<option value=-1>Wybierz użytkownika</option>") // fill with select user message
+		}
+};
+</script>
 
 {% endblock %}

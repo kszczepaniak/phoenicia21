@@ -32,9 +32,13 @@ class Dokument(models.Model):
         (POLISA, 'Polisa'),
     )
     
+    # dekretacje
+    wyzywienie_zbiorka = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    
     typ = models.CharField(max_length=2,
                            choices=TYP_DOKUMENTU_CHOICES)
     
+    kontrahent             = models.ForeignKey('Kontrahent', blank=True, null=True)
     dekret                 = models.ForeignKey('Dekret', blank=True, null=True)
     numer                  = models.CharField(max_length=50)
     opis                   = models.CharField(max_length=70)                      # krotki dowolny opis czego dotyczy dokument
@@ -44,7 +48,7 @@ class Dokument(models.Model):
     zaliczka               = models.ForeignKey('Zaliczka', blank=True, null=True)
     uzytkownik             = models.ForeignKey('Uzytkownik')
     jednostka              = models.ForeignKey('Jednostka')
-    #hufiec               = models.ForeignKey('Hufiec')
+    hufiec                 = models.ForeignKey('Hufiec')
     raport_kasowy          = models.ForeignKey('RaportKasowy', blank=True, null=True)
     # pola potrzebne do zglaszania faktur
     uzytkownik_zglaszajacy = models.ForeignKey('Uzytkownik', related_name='zglaszajacy')
@@ -54,7 +58,25 @@ class Dokument(models.Model):
         (ZGLOSZONA, 'Zg\u0142oszona'),
         (ZATWIERDZONA, 'Zatwierdzona'),
     )
-    status = models.CharField(max_length=2, choices=STATUS_CHOICES) 
+    status = models.CharField(max_length=2, choices=STATUS_CHOICES)
+    
+    def check_dekret_status(self):
+        
+        def sum_dekret(self):
+            return self.wyzywienie_zbiorka
+        
+        if sum_dekret(self) == 0:
+            return 'None'
+        elif sum_dekret(self) == self.wydatek:
+            return 'Correct'
+        else:
+            return 'Error'
+    
+class Kontrahent(models.Model):
+    nazwa            = models.CharField(max_length=120)
+    adres_ulica      = models.CharField(max_length=100)
+    adres_kod_miasto = models.CharField(max_length=50)
+    nip              = models.CharField(max_length=10)
 
 class Zaliczka(models.Model):
     data_wystawienia   = models.DateField(auto_now_add=True)                  # data wprowadzenia do systemu
@@ -63,6 +85,7 @@ class Zaliczka(models.Model):
     pobierajacy        = models.ForeignKey('Uzytkownik')
     wystawiajacy       = models.ForeignKey('Uzytkownik', related_name='wystawiajacy')
     jednostka          = models.ForeignKey('Jednostka')
+    hufiec             = models.ForeignKey('Hufiec')
     kwota              = models.DecimalField(max_digits=10, decimal_places=2)
     AKTYWNA    = 'AKT'
     ROZLICZONA = 'ROZ'
@@ -104,12 +127,16 @@ class OperacjaSalda(models.Model):
 
 class Hufiec(models.Model):
     nazwa = models.CharField(max_length=40)
+    numer = models.CharField(max_length=5)
+    
+    def __str__(self):
+        return self.nazwa
 
 class Jednostka(models.Model):
     nazwa                = models.CharField(max_length=50)
     saldo                = models.DecimalField(max_digits=10, decimal_places=2)
     aktywna              = models.BooleanField()
-    #hufiec              = models.ForeignKey('Hufiec')
+    hufiec               = models.ForeignKey('Hufiec')
     
     PODSTAWOWA     = 'PDS'
     NIEPODSTAWOWA  = 'NPD'
@@ -163,9 +190,10 @@ class Uzytkownik(AbstractBaseUser):
     hufiec    = models.ForeignKey('Hufiec')
     
     # pola wymagane przez Django user model
-    is_active = models.BooleanField(default=False)
-    is_admin = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=False)
+    is_active   = models.BooleanField(default=False)
+    is_admin    = models.BooleanField(default=False)
+    is_staff    = models.BooleanField(default=False)
+    is_skarbnik = models.BooleanField(default=False)
     
     objects = UserManager()
 
@@ -201,7 +229,7 @@ class RaportKasowy(models.Model):
     saldo_stop  = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     numer_start = models.IntegerField(default=0)
     numer_stop  = models.IntegerField(default=0)
-    #hufiec        = models.ForeignKey('Hufiec')
+    hufiec      = models.ForeignKey('Hufiec')
     
     UTWORZONY     = 'UTW'
     ZLOZONY       = 'ZLO'
@@ -220,7 +248,7 @@ class RaportKasowy(models.Model):
 class BilansOtwarcia(models.Model):
     rok    = models.IntegerField()
     kwota  = models.DecimalField(max_digits=12, decimal_places=2)
-    #hufiec  = models.ForeignKey('Hufiec')
+    hufiec = models.ForeignKey('Hufiec')
 
 class SposobPlatnosci(models.Model):
     nazwa       = models.CharField(max_length=50)

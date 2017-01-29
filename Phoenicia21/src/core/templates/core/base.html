@@ -82,12 +82,17 @@
 		            <li><a href="docs_search">Szukaj</a></li>
 		            <li><a href="docs_add">Dodaj</a></li>
 		            <li><a href="docs_confirm">Zatwierdź</a></li>
+		            <!-- OGRANICZENIE WYSTAWIANIA ZALICZEK TYLKO DLA OCHOTY -->
+		            {% if request.user.hufiec.id == 1 %}
                     <li role=separator class=divider></li>
 		            <li><a href="account_view">Zaliczki</a></li>
 		            <li><a href="account_add">Wystaw zaliczkę</a></li>
+		            {% endif %}
 		          </ul>
 		        </li>
 		        
+		        <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
+		        {% if request.user.hufiec.id == 1 %}
 		        <li class="dropdown">
 		          <a href="docs_view" class="dropdown-toggle" data-toggle="dropdown">Operacje na saldach <span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
@@ -99,6 +104,7 @@
 		            
 		          </ul>
 		        </li>
+		        {% endif %}
 		        
 		        <li class="dropdown">
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Raporty<span class="caret"></span></a>
@@ -108,6 +114,8 @@
 		          </ul>
 		        </li>
 		        
+		        <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
+		        {% if request.user.hufiec.id == 1 %}
 		        <li class="dropdown">
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Faktury<span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
@@ -118,17 +126,20 @@
 		        </li>
 		        
 		        <li><a href="https://drive.google.com/drive/folders/0B4hUkplS1WlNWDZpWWc1Sy1fYlE">Materiały</a></li>
+		        {% endif %}
 		        
-		        {% if request.user.is_admin %}
+		        {% if request.user.is_skarbnik or request.user.is_admin %}
 		        <li class="dropdown">
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin<span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
 		            <li><a href="admin_users">Użytkownicy</a></li>
 		            <li><a href="admin_units">Jednostki</a></li>
+		            {% if request.user.is_admin %}
 		            <li><a href="admin_tags">Etykiety</a></li>
 		            <li><a href="admin_doctitle">Dekrety</a></li>
 		            <li><a href="admin_balance">Salda</a></li>
-		            <li><a href="admin_invoices">Faktury</a></li>    
+		            <li><a href="admin_invoices">Faktury</a></li>
+		            {% endif %}
 		          </ul>
 		        </li>
 		        {% endif %}
@@ -137,11 +148,14 @@
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Podgląd <span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
 		            <li><a href="docs_search">Dokumenty</a></li>
-		            <li><a href="account_view">Zaliczki</a></li>
-		            <li><a href="operations_view">Operacje</a></li>
 		            <li><a href="docs_confirm">Zgłoszenia</a></li>
-		            <li><a href="invoices">Faktury</a></li>
 		            <li><a href="reports_balance">Salda</a></li>
+		            <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
+		        	{% if request.user.hufiec.id == 1 %}
+		        	<li><a href="account_view">Zaliczki</a></li>
+		        	<li><a href="operations_view">Operacje</a></li>
+		        	<li><a href="invoices">Faktury</a></li>
+		        	{% endif %}
 		          </ul>
 		        </li>
 		        
@@ -149,19 +163,26 @@
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Rejestracja danych <span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
 		          	<li><a href="register_docs">Dokumenty</a></li>
+		            <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
+		        	{% if request.user.hufiec.id == 1 %}		          	
 		            <li><a href="#">Operacje</a></li>
 		            <li><a href="invoices_single">Faktura</a></li>
 		            <li><a href="invoices_upload">Faktury wiele</a></li>
+		            {% endif %}
 		          </ul>
 		        </li>
 				
+		        <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
+		        {% if request.user.hufiec.id == 1 %}				
 				<li><a href="https://docs.google.com/folderview?id=0B4hUkplS1WlNaTRKVzA1TGpoRFU&usp=drive_web&tid=0B9d12whtcnm-YzE4ZTQ4MDktOTAwNy00NTFmLWFmODctYjdjNzYxZWUzYzQy">Materiały</a></li>
+				{% endif %}
 		        {% endif %} <!-- staff navbar end-->
 		      </ul>
 		      
 		      <!-- przyciski i status logowania -->
 		      <ul class="nav navbar-nav navbar-right">
 		      {% if user.is_authenticated %}
+		      	<li class="navbar-text">Zalogowany jako {{ user.login }} (Hufiec {{ user.hufiec }})</li>
 		        <li><a href="profile">Profil</a></li>
 		        <li><a href="auth_logout">Wyloguj</a></li>
 		      {% else %}

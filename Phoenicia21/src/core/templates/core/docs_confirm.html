@@ -27,6 +27,7 @@
 	  <th>Wydatek</th>
 	  <th>Etykiety</th>
 	  <th>Jednostka</th>
+	  <th>Hufiec</th>
 	  
   </tr></thead>
   
@@ -46,6 +47,7 @@
   <td>{{ dok.wydatek }}</td>
   <td>{% for ety in dok.etykiety.all %} {{ ety }} </br> {% endfor %}</td>
   <td>{{ dok.jednostka }}</td>
+  <td>{{ dok.hufiec }}</td>
   </tr>
   {% endfor %}
   

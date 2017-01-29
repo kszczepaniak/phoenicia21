@@ -77,8 +77,12 @@ def docs_add(request):
         wplyw   = 0.0 if request.POST['wplyw'] == '' else request.POST['wplyw'].replace(',', '.')
         wydatek = 0.0 if request.POST['wydatek'] == '' else request.POST['wydatek'].replace(',', '.')
         
+        # dekretacja
+        wyzywienie_zbiorka = request.POST['dekret_wyz_zbiorka'].replace(',', '.') if (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['dekret_wyz_zbiorka'])) else 0.0 
+        
         dokument = Dokument(data_dokumentu=request.POST['data_dokumentu'], typ=request.POST['typ'], numer=request.POST['numer'], opis=request.POST['opis'], wplyw=wplyw, 
-                            wydatek=wydatek, jednostka=jednostka, uzytkownik=request.user, uzytkownik_zglaszajacy=request.user, status='ZT')        
+                            wydatek=wydatek, wyzywienie_zbiorka=wyzywienie_zbiorka, 
+                            jednostka=jednostka, hufiec=request.user.hufiec, uzytkownik=request.user, uzytkownik_zglaszajacy=request.user, status='ZT')        
         dokument.save()
         
         # dodwanie etykiet
@@ -96,7 +100,7 @@ def docs_add(request):
         error_log = []
            
     # dane potrzebne do formularza dodawania
-    jednostki = Jednostka.objects.all().order_by('nazwa')
+    jednostki = Jednostka.objects.filter(hufiec=request.user.hufiec).order_by('nazwa')
     etykiety  = Etykieta.objects.all()  
     
     context = {'error_log':error_log, 'jednostki':jednostki, 'etykiety':etykiety, 'typy_dokumentow':Dokument.TYP_DOKUMENTU_CHOICES}
@@ -112,7 +116,7 @@ def docs_search(request):
         # ograniczenie wyboru jednostek
         jednostki = request.user.jednostka.all().order_by('nazwa')
     else:
-        jednostki = Jednostka.objects.all().order_by('nazwa')
+        jednostki = Jednostka.objects.filter(hufiec=request.user.hufiec).order_by('nazwa')
     
     today    = date.today()
     etykiety = Etykieta.objects.all()
@@ -158,6 +162,8 @@ def docs_search(request):
                 
         if request.POST['jednostka'] != '0':
             kwargs['jednostka'] = int(request.POST['jednostka'])
+        elif request.user.is_staff:
+            kwargs['jednostka__in'] = request.user.jednostka.all()
             
         if request.POST['opis'] != '':    
             kwargs['opis__contains'] = request.POST['opis']
@@ -295,7 +301,7 @@ def docs_search(request):
     # wyswietla liste raportow i pozwala dodac dokumenty do wybranego
     elif 'add_to_report' in request.POST:    
         dokumenty = [ Dokument.objects.get(id=doc_id) for doc_id in request.POST.getlist('pick') ]
-        raporty   = RaportKasowy.objects.order_by('rok', 'miesiac').reverse()
+        raporty   = RaportKasowy.objects.filter(hufiec=request.user.hufiec).order_by('rok', 'miesiac').reverse()
         
         context['raporty']              = raporty 
         context['dokumenty_do_dodania'] = dokumenty
@@ -312,7 +318,7 @@ def docs_search(request):
     # wyswietla liste aktywnych zaliczek i pozwala dodac dokumenty do wybranej
     elif 'add_to_account' in request.POST:
         dokumenty        = [ Dokument.objects.get(id=doc_id) for doc_id in request.POST.getlist('pick') ]
-        zaliczki_aktywne = Zaliczka.objects.filter(status='AKT')
+        zaliczki_aktywne = Zaliczka.objects.filter(hufiec=request.user.hufiec, status='AKT')
         
         context['zaliczki_aktywne']       = zaliczki_aktywne
         context['dokumenty_do_podpiecia'] = dokumenty
@@ -324,6 +330,24 @@ def docs_search(request):
         for dok_id in request.POST.getlist('dokumenty_do_zaliczki'):
             dok = Dokument.objects.get(id=dok_id)
             dok.zaliczka = zaliczka
+            dok.save()
+            
+    elif 'add_doctitle' in request.POST:
+        dokumenty = [ Dokument.objects.get(id=doc_id) for doc_id in request.POST.getlist('pick') ]
+        
+        context['dokumenty_do_dekretacji'] = dokumenty
+        
+    elif 'add_doctitle_confirm' in request.POST:
+        
+        for dok_id in request.POST.getlist('dokumenty_dekretowane'):
+            dok = Dokument.objects.get(id=dok_id)
+            
+            # wczytanie dekretacji
+            wyzywienie_zbiorka = request.POST['dekret_wyz_zbiorka' + dok_id].replace(',', '.') if (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['dekret_wyz_zbiorka' + dok_id])) else 0.0
+            
+            # zapisanie dekretacji do dokumentow
+            dok.wyzywienie_zbiorka = wyzywienie_zbiorka
+            
             dok.save()
             
     else:
@@ -386,8 +410,8 @@ def docs_confirm(request):
         jednostka.saldo -= decimal.Decimal(wydatek)
         jednostka.save()
     
-    if (request.user.is_staff or request.user.is_admin):  
-        jednostki       = Jednostka.objects.all().order_by('nazwa')
+    if (request.user.is_admin or request.user.is_staff or request.user.is_skarbnik):  
+        jednostki       = Jednostka.objects.filter(hufiec=request.user.hufiec).order_by('nazwa')
         typy_dokumentow = Dokument.TYP_DOKUMENTU_CHOICES
     else:
         jednostki = request.user.jednostka.all().order_by('nazwa')
@@ -438,8 +462,10 @@ def docs_confirm(request):
             change_balance(conf_dok.jednostka, conf_dok.wplyw, conf_dok.wydatek)
     
     else:
-        if (request.user.is_staff or request.user.is_admin):
+        if request.user.is_admin:
             dokumenty = Dokument.objects.filter(status='ZG')
+        elif (request.user.is_staff or request.user.is_skarbnik):
+            dokumenty = Dokument.objects.filter(status='ZG', hufiec=request.user.hufiec)
         else:
             jednostki = request.user.jednostka.all().order_by('nazwa')
             dokumenty = Dokument.objects.filter(status='ZG', jednostka__in=jednostki)
@@ -479,7 +505,7 @@ def register_docs(request):
         wydatek = 0.0 if request.POST['wydatek'] == '' else request.POST['wydatek'].replace(',', '.')
         
         dokument = Dokument(data_dokumentu=request.POST['data_dokumentu'], typ='FV', numer=request.POST['numer'], opis=request.POST['opis'], wplyw=wplyw, 
-                            wydatek=wydatek, jednostka=jednostka, uzytkownik=request.user, uzytkownik_zglaszajacy=request.user, status='ZG')        
+                            wydatek=wydatek, jednostka=jednostka, hufiec=request.user.hufiec, uzytkownik=request.user, uzytkownik_zglaszajacy=request.user, status='ZG')        
         dokument.save()
         
         # dodwanie etykiet
@@ -500,6 +526,10 @@ def register_docs(request):
     return render(request, 'core/register_docs.html', context)
 
 def account_add(request):
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
     
     if not request.user.is_authenticated():
         return redirect('auth_login')
@@ -544,6 +574,10 @@ def account_add(request):
     return render(request, 'core/account_add.html', context)
 
 def account_view(request):
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
     
     if not request.user.is_authenticated():
         return redirect('auth_login')
@@ -594,23 +628,28 @@ def auth_login(request):
     if 'create_user' in request.POST:
         context['create'] = 1
         context['jednostki'] = Jednostka.objects.filter(typ_jednostki__in=['PDS', 'SZP', 'ZSH', 'NPD']).order_by('nazwa')
+        context['hufce']     = Hufiec.objects.all().order_by('nazwa')
+        context['jed2nazwa'] = { jed.id:jed.nazwa for jed in Jednostka.objects.all() }
+        context['huf2jed']   = { huf.id:[ jed.id for jed in Jednostka.objects.filter(hufiec=huf) ] for huf in Hufiec.objects.all() }
+            
     if 'create_new' in request.POST:
         
         error_log = validate_data(request)
         
         ###!!! inicjaliacja hufca, zmienic do produkcji
-        if len(Hufiec.objects.all()) == 0:
-            hufiec = Hufiec(nazwa='SuperHufiec')
-            hufiec.save()
-        else:
-            hufiec = Hufiec.objects.get(id=1)
+        #if len(Hufiec.objects.all()) == 0:
+        #    hufiec = Hufiec(nazwa='SuperHufiec')
+        #    hufiec.save()
+        #else:
+        #    hufiec = Hufiec.objects.get(id=1)
         
         if error_log: 
             context['error_log'] = error_log
             context['create'] = 1
             context['jednostki'] = Jednostka.objects.filter(typ_jednostki__in=['PDS', 'SZP', 'ZSH', 'NPD']).order_by('nazwa')
         else:
-            user = Uzytkownik.objects.create_user(request.POST['nazwa'], request.POST['haslo'], imie=request.POST['imie'], 
+            hufiec = Hufiec.objects.get(id=request.POST['hufiec']) 
+            user   = Uzytkownik.objects.create_user(request.POST['nazwa'], request.POST['haslo'], imie=request.POST['imie'], 
                                             nazwisko=request.POST['nazwisko'], email=request.POST['email'], hufiec=hufiec,
                                             jednostka=request.POST['jednostka'])
             # wyslij maila z powiadomieniem o nowym uzytkowniku
@@ -703,6 +742,11 @@ def admin_units(request):
     administracja jednostkami: dodawanie, edycja i usuwanie
     '''
     ###!!! zaimplementowac edycje i usuwanie (na podstawie dokumentow)
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
+    
     if not request.user.is_authenticated():
         return redirect('auth_login')
     elif not request.user.is_admin:
@@ -745,14 +789,18 @@ def admin_users(request):
     ###!!! zaimplementowac edycje i usuwanie (na podstawie dokumentow)
     if not request.user.is_authenticated():
         return redirect('auth_login')
-    elif not request.user.is_admin:
+    elif not (request.user.is_admin or request.user.is_skarbnik):
         return redirect('access_denied')
 
-    uzytkownicy = Uzytkownik.objects.all()
+    if request.user.is_admin:
+        uzytkownicy = Uzytkownik.objects.all()
+    else:
+        uzytkownicy = Uzytkownik.objects.filter(hufiec=request.user.hufiec)
     context = {'uzytkownicy': uzytkownicy}
         
     # wyswietla uzytkownikow do edycji        
     if 'edit' in request.POST:
+        context['hufce'] = Hufiec.objects.all()
         context['edytowani_uzytkownicy'] = []
         for uzyt_id in request.POST.getlist('pick'):
             context['edytowani_uzytkownicy'].append(Uzytkownik.objects.get(id=uzyt_id))
@@ -763,10 +811,12 @@ def admin_users(request):
             uzyt_id = request.POST.getlist('pick')[uzyt]
             
             # znajdz uzytkonika i wykonaj zmiany
-            uzytkownik = Uzytkownik.objects.get(id=uzyt_id)
-            uzytkownik.is_admin  = True if request.POST.getlist('admin')[uzyt] == "1" else False
-            uzytkownik.is_staff  = True if request.POST.getlist('staff')[uzyt] == "1" else False
-            uzytkownik.is_active = True if request.POST.getlist('aktywny')[uzyt] == "1" else False
+            uzytkownik             = Uzytkownik.objects.get(id=uzyt_id)
+            uzytkownik.is_admin    = True if request.POST.getlist('admin')[uzyt] == "1" else False
+            uzytkownik.is_skarbnik = True if request.POST.getlist('skarbnik')[uzyt] == "1" else False
+            uzytkownik.is_staff    = True if request.POST.getlist('staff')[uzyt] == "1" else False
+            uzytkownik.is_active   = True if request.POST.getlist('aktywny')[uzyt] == "1" else False
+            uzytkownik.hufiec      = Hufiec.objects.get(id=request.POST.getlist('hufiec')[uzyt])
             uzytkownik.save()
     
     elif 'add_units' in request.POST:
@@ -775,7 +825,11 @@ def admin_users(request):
         for uzyt_id in request.POST.getlist('pick'):
             context['uzytkownicy_do_jednostek'].append(Uzytkownik.objects.get(id=uzyt_id))
         # pobierz jednostki, aby wyswietlic ich liste
-        context['jednostki'] = Jednostka.objects.all()
+        if request.user.is_admin:
+            jednostki = Jednostka.objects.all()
+        else:
+            jednostki = Jednostka.objects.filter(hufiec=request.user.hufiec)
+        context['jednostki'] = jednostki
     elif 'assign_units' in request.POST:
         # przejdz po kazdym uzytkowniku i dodaj wszystkie jednostki wskazane w formularzu
         for uzyt_id in request.POST.getlist('users'):
@@ -809,11 +863,12 @@ def admin_balance(request):
         return redirect('access_denied')
 
     if 'add' in request.POST:
-        bilans = BilansOtwarcia(rok=request.POST['rok'], kwota=request.POST['saldo'].replace(',', '.'))
+        bilans = BilansOtwarcia(rok=request.POST['rok'], kwota=request.POST['saldo'].replace(',', '.'), hufiec=Hufiec.objects.get(id=request.POST['hufiec']))
         bilans.save()
    
     bilansy_otwarcia = BilansOtwarcia.objects.all()
-    context = {'bilansy_otwarcia':bilansy_otwarcia}
+    hufce            = Hufiec.objects.all()
+    context = {'bilansy_otwarcia':bilansy_otwarcia, 'hufce':hufce}
     return render(request, 'core/admin_balance.html', context)
 
 def admin_tags(request):
@@ -915,7 +970,7 @@ def reports_cash(request):
         pdfmetrics.registerFont(TTFont('FreeSerif', 'FreeSerif.ttf'))
                 
         p.setFont("FreeSerif", 12, leading = None)
-        p.drawString(50,550,'Raport kasowy Hufiec Warszawa Ochota ' + MIESIACE[raport.miesiac -1][1] + ' ' + str(raport.rok) + ' strona ' + str(page_count))
+        p.drawString(50,550,'Raport kasowy Hufiec ' + request.user.hufiec.nazwa + ' ' + MIESIACE[raport.miesiac -1][1] + ' ' + str(raport.rok) + ' strona ' + str(page_count))
         #p.drawString(200, 530, 'Saldo początkowe' + str(raport.saldo_start))
         p.line(20,545,820,545)
         
@@ -961,14 +1016,17 @@ def reports_cash(request):
         
         return response 
     
-    raporty = RaportKasowy.objects.order_by('rok', 'miesiac').reverse()
+    if request.user.is_admin:
+        raporty = RaportKasowy.objects.order_by('rok', 'miesiac').reverse()
+    else:
+        raporty = RaportKasowy.objects.filter(hufiec=request.user.hufiec).order_by('rok', 'miesiac').reverse()
     
-    lata = RaportKasowy.objects.order_by().values('rok').distinct()
+    lata  = RaportKasowy.objects.order_by().values('rok').distinct() 
     
     context = {'raporty':raporty, 'miesiace':MIESIACE, 'lata':sorted([d['rok'] for d in lata])}
     
     if 'add' in request.POST:
-        raport_kasowy = RaportKasowy(miesiac=request.POST['miesiac'], rok=request.POST['rok'])
+        raport_kasowy = RaportKasowy(miesiac=request.POST['miesiac'], rok=request.POST['rok'], hufiec=request.user.hufiec)
         raport_kasowy.save()
     
     # edycja wybanego raportu kasowego    
@@ -1009,18 +1067,18 @@ def reports_cash(request):
         miesiac_start = int(request.POST['miesiac_start'])
         rok           = request.POST['rok']
         if miesiac_start == 1:
-            saldo_start = BilansOtwarcia.objects.get(rok=rok).kwota
+            saldo_start = BilansOtwarcia.objects.get(rok=rok, hufiec=request.user.hufiec).kwota
             numer_start = 1
         else:
-            saldo_start = RaportKasowy.objects.get(miesiac=miesiac_start - 1, rok=rok).saldo_stop
-            numer_start = RaportKasowy.objects.get(miesiac=miesiac_start - 1, rok=rok).numer_stop + 1
+            saldo_start = RaportKasowy.objects.get(miesiac=miesiac_start - 1, rok=rok, hufiec=request.user.hufiec).saldo_stop
+            numer_start = RaportKasowy.objects.get(miesiac=miesiac_start - 1, rok=rok, hufiec=request.user.hufiec).numer_stop + 1
             
         # iterate through year recounting each month
         for report_month in range(miesiac_start, 13):
             
             ###!!! o co chodzi z tym try except tutaj?
             try:
-                current_report = RaportKasowy.objects.get(miesiac=report_month, rok=rok)
+                current_report = RaportKasowy.objects.get(miesiac=report_month, rok=rok, hufiec=request.user.hufiec)
             except ObjectDoesNotExist:
                 break
             if current_report is None: break
@@ -1055,8 +1113,10 @@ def reports_balance(request):
     elif not (request.user.is_staff or request.user.is_admin):
         # ograniczenie wyboru jednostek
         jednostki = request.user.jednostka.all().order_by('nazwa')
-    else:
+    elif (request.user.is_admin):
         jednostki = Jednostka.objects.all().order_by('nazwa')
+    else:
+        jednostki = Jednostka.objects.filter(hufiec=request.user.hufiec).order_by('nazwa')
 
     context = {'jednostki': jednostki, 'typy_jednostek': Jednostka.TYP_JEDNOSTKI_CHOICES}
     return render(request, 'core/reports_balance.html', context)
@@ -1126,6 +1186,10 @@ def operations_view(request):
         operacje = OperacjaSalda.objects.filter(*args, **kwargs).order_by('data_operacji').reverse()   
         
         return operacje
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
         
     if not request.user.is_authenticated():
         return redirect('auth_login')
@@ -1168,6 +1232,11 @@ def operations_view(request):
     return render(request, 'core/operations_view.html', context)
 
 def operations_transfer(request):
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
+    
     if not request.user.is_authenticated():
         return redirect('auth_login')
     elif not (request.user.is_staff or request.user.is_admin):
@@ -1210,6 +1279,11 @@ def operations_transfer(request):
     return render(request, 'core/operations_transfer.html', context)
 
 def operations_bank(request):
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
+    
     if not request.user.is_authenticated():
         return redirect('auth_login')
     elif not (request.user.is_staff or request.user.is_admin):
@@ -1279,6 +1353,10 @@ def operations_many(request):
             if jed_id not in ['WSZ', 'PDS', 'NPD', 'SZP', 'ZSH']: wybrane_jednostki.add(Jednostka.objects.get(id=jed_id))
         
         return wybrane_jednostki        
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
       
     if not request.user.is_authenticated():
         return redirect('auth_login')
@@ -1522,6 +1600,10 @@ def invoices(request):
         
         return response
     
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
+    
     if not request.user.is_authenticated():
         return redirect('auth_login')
     elif not (request.user.is_staff or request.user.is_admin):
@@ -1572,6 +1654,11 @@ def invoices(request):
     return render(request, 'core/invoices.html', context)
 
 def invoices_upload(request):
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
+    
     if not request.user.is_authenticated():
         return redirect('auth_login')
     
@@ -1625,6 +1712,11 @@ def invoices_upload(request):
     return render(request, 'core/invoices_upload.html', context)
 
 def invoices_single(request):
+    
+    # blokada dostepu dla hufcow innych niz Ochota
+    if request.user.hufiec.id != 1:
+        return redirect('access_denied')
+    
     if not request.user.is_authenticated():
         return redirect('auth_login')
     
