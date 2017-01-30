@@ -817,11 +817,13 @@ def admin_users(request):
             
             # znajdz uzytkonika i wykonaj zmiany
             uzytkownik             = Uzytkownik.objects.get(id=uzyt_id)
-            uzytkownik.is_admin    = True if request.POST.getlist('admin')[uzyt] == "1" else False
-            uzytkownik.is_skarbnik = True if request.POST.getlist('skarbnik')[uzyt] == "1" else False
+            if request.user.is_admin:
+                # zakres uprawnien ktore moze nadac tylko admin
+                uzytkownik.is_admin    = True if request.POST.getlist('admin')[uzyt] == "1" else False
+                uzytkownik.is_skarbnik = True if request.POST.getlist('skarbnik')[uzyt] == "1" else False
+                uzytkownik.hufiec      = Hufiec.objects.get(id=request.POST.getlist('hufiec')[uzyt])
             uzytkownik.is_staff    = True if request.POST.getlist('staff')[uzyt] == "1" else False
             uzytkownik.is_active   = True if request.POST.getlist('aktywny')[uzyt] == "1" else False
-            uzytkownik.hufiec      = Hufiec.objects.get(id=request.POST.getlist('hufiec')[uzyt])
             uzytkownik.save()
     
     elif 'add_units' in request.POST:
