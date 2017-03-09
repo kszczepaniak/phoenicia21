@@ -117,7 +117,7 @@ def docs_search(request):
         jednostki = request.user.jednostka.all().order_by('nazwa')
     else:
         jednostki = Jednostka.objects.filter(hufiec=request.user.hufiec).order_by('nazwa')
-    
+        
     today    = date.today()
     etykiety = Etykieta.objects.all()
     context  = {'today': today, 'jednostki': jednostki, 'etykiety':etykiety, 'typy_dokumentow':Dokument.TYP_DOKUMENTU_CHOICES}
@@ -162,8 +162,10 @@ def docs_search(request):
                 
         if request.POST['jednostka'] != '0':
             kwargs['jednostka'] = int(request.POST['jednostka'])
-        elif request.user.is_staff:
-            kwargs['jednostka__in'] = request.user.jednostka.all()
+        #elif request.user.is_staff:
+        #    kwargs['jednostka__in'] = request.user.jednostka.all()
+        elif (request.user.is_staff or request.user.is_skarbnik):
+            kwargs['jednostka__in'] = Jednostka.objects.filter(hufiec=request.user.hufiec)
             
         if request.POST['opis'] != '':    
             kwargs['opis__contains'] = request.POST['opis']
@@ -985,37 +987,43 @@ def reports_cash(request):
         data = [header]
         data.append(['', '', '', 'Saldo początkowe', '', '', str(raport.saldo_start)])
         total_dok = len(raport.dokument_set.all())
-        for dok_enum in enumerate(raport.dokument_set.all().order_by('data_dokumentu')):
-            dok = dok_enum[1]
-            saldo += (dok.wplyw - dok.wydatek)
-            data.append([str(numer_dok), str(dok.data_dokumentu), dok.numer, dok.opis, str(dok.wplyw), str(dok.wydatek), str(saldo)])
-            numer_dok += 1
-            wydatki_suma += dok.wydatek
-            wplywy_suma += dok.wplyw
+        if not raport.dokument_set.all().order_by('data_dokumentu'):
             table_y_pos -= 16
-            if table_y_pos < 80:
+            data.append(['', '', '', 'Saldo końcowe', '', '', str(raport.saldo_start)])
+            wrap_table(data)
+            p.drawString(50,440,'W miesiącu ' + MIESIACE[raport.miesiac -1][1] + ' nie zarejestrowano żadnych operacji kasowych.')
+        else:
+            for dok_enum in enumerate(raport.dokument_set.all().order_by('data_dokumentu')):
+                dok = dok_enum[1]
+                saldo += (dok.wplyw - dok.wydatek)
+                data.append([str(numer_dok), str(dok.data_dokumentu), dok.numer, dok.opis, str(dok.wplyw), str(dok.wydatek), str(saldo)])
+                numer_dok += 1
+                wydatki_suma += dok.wydatek
+                wplywy_suma += dok.wplyw
+                table_y_pos -= 16
+                if table_y_pos < 80:
+                    if dok_enum[0] + 1 == total_dok: 
+                        p.setFont("FreeSerif", 10, leading = None)
+                        p.drawString(550, table_y_pos - 16, 'RAZEM' + ' '*12 + str(wplywy_suma) + ' '*14 + str(wydatki_suma))
+                        p.drawString(550, table_y_pos - 32, 'Saldo końcowe' + ' '*54 + str(saldo))
+                    wrap_table(data)
+                    data = [header]
+                    p.showPage()
+                    page_count  += 1
+                    table_y_pos = 520
+                    p.setFont("FreeSerif", 12, leading = None)
+                    p.drawString(50,550,'Raport kasowy Hufiec ' + request.user.hufiec.nazwa + ' ' + MIESIACE[raport.miesiac -1][1] + ' ' + str(raport.rok) + ' strona ' + str(page_count))
+                    p.line(20,545,820,545)
+            if len(data) > 1:
                 if dok_enum[0] + 1 == total_dok: 
+                    # alternatywna wersja: przyczepione do tabeli
+                    #data.append(['', '', '', 'RAZEM', str(wplywy_suma), str(wydatki_suma), ''])
+                    #data.append(['', '', '', 'Saldo końcowe', '', '', str(saldo)])
                     p.setFont("FreeSerif", 10, leading = None)
                     p.drawString(550, table_y_pos - 16, 'RAZEM' + ' '*12 + str(wplywy_suma) + ' '*14 + str(wydatki_suma))
                     p.drawString(550, table_y_pos - 32, 'Saldo końcowe' + ' '*54 + str(saldo))
                 wrap_table(data)
-                data = [header]
                 p.showPage()
-                page_count  += 1
-                table_y_pos = 520
-                p.setFont("FreeSerif", 12, leading = None)
-                p.drawString(50,550,'Raport kasowy Hufiec Warszawa Ochota ' + MIESIACE[raport.miesiac -1][1] + ' ' + str(raport.rok) + ' strona ' + str(page_count))
-                p.line(20,545,820,545)
-        if len(data) > 1:
-            if dok_enum[0] + 1 == total_dok: 
-                # alternatywna wersja: przyczepione do tabeli
-                #data.append(['', '', '', 'RAZEM', str(wplywy_suma), str(wydatki_suma), ''])
-                #data.append(['', '', '', 'Saldo końcowe', '', '', str(saldo)])
-                p.setFont("FreeSerif", 10, leading = None)
-                p.drawString(550, table_y_pos - 16, 'RAZEM' + ' '*12 + str(wplywy_suma) + ' '*14 + str(wydatki_suma))
-                p.drawString(550, table_y_pos - 32, 'Saldo końcowe' + ' '*54 + str(saldo))
-            wrap_table(data)
-            p.showPage()
         
     
         # Close the PDF object cleanly, and we're done.
