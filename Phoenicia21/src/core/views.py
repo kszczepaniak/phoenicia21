@@ -78,7 +78,10 @@ def docs_add(request):
         wydatek = 0.0 if request.POST['wydatek'] == '' else request.POST['wydatek'].replace(',', '.')
         
         # dekretacja
-        wyzywienie_zbiorka = request.POST['dekret_wyz_zbiorka'].replace(',', '.') if (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['dekret_wyz_zbiorka'])) else 0.0 
+        
+        # sprawdzic ponizsza linijke, zwraca nie-decimal przy dodawaniu dokumentu
+        #wyzywienie_zbiorka = request.POST['dekret_wyz_zbiorka'].replace(',', '.') if (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['dekret_wyz_zbiorka'])) else 0.0 
+        wyzywienie_zbiorka = decimal.Decimal(0.0)
         
         dokument = Dokument(data_dokumentu=request.POST['data_dokumentu'], typ=request.POST['typ'], numer=request.POST['numer'], opis=request.POST['opis'], wplyw=wplyw, 
                             wydatek=wydatek, wyzywienie_zbiorka=wyzywienie_zbiorka, 
@@ -557,7 +560,7 @@ def account_add(request):
         pobierajacy = Uzytkownik.objects.get(id=request.POST['pobierajacy'])
                
         zaliczka = Zaliczka(termin_rozliczenia=request.POST['termin_rozliczenia'], tytul=request.POST['tytul'], pobierajacy=pobierajacy, wystawiajacy=request.user,
-                            jednostka=jednostka, kwota=request.POST['kwota'].replace(',', '.'), status='AKT')
+                            jednostka=jednostka, hufiec=request.user.hufiec, kwota=request.POST['kwota'].replace(',', '.'), status='AKT')
         zaliczka.save()
     
     # dane potrzebne do formularza dodawania
