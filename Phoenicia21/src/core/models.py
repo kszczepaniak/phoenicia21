@@ -32,14 +32,10 @@ class Dokument(models.Model):
         (POLISA, 'Polisa'),
     )
     
-    # dekretacje
-    wyzywienie_zbiorka = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    
     typ = models.CharField(max_length=2,
                            choices=TYP_DOKUMENTU_CHOICES)
     
     kontrahent             = models.ForeignKey('Kontrahent', blank=True, null=True)
-    dekret                 = models.ForeignKey('Dekret', blank=True, null=True)
     numer                  = models.CharField(max_length=50)
     opis                   = models.CharField(max_length=70)                      # krotki dowolny opis czego dotyczy dokument
     wplyw                  = models.DecimalField(max_digits=10, decimal_places=2)
@@ -60,10 +56,11 @@ class Dokument(models.Model):
     )
     status = models.CharField(max_length=2, choices=STATUS_CHOICES)
     
+    ###!!! ta funkcja byla czescia starej wersji dekretowania - trzeba zmienic
     def check_dekret_status(self):
         
         def sum_dekret(self):
-            return self.wyzywienie_zbiorka
+            return 0
         
         if sum_dekret(self) == 0:
             return 'None'
@@ -98,12 +95,18 @@ class Zaliczka(models.Model):
     def is_past_due(self):
         return date.today() > self.termin_rozliczenia
 
-class Dekret(models.Model):
+
+class TypDekretu(models.Model):
     numer = models.CharField(max_length=16)
     opis  = models.CharField(max_length=64)
     
     def __str__(self):
         return self.numer
+
+class Dekret(models.Model):
+    typ_dekretu = models.ForeignKey('TypDekretu')
+    dokument    = models.ForeignKey('Dokument')
+    kwota       = models.DecimalField(max_digits=10, decimal_places=2)
 
 class OperacjaSalda(models.Model):
     # nie-gotowkowe operacje na saldach jednostek
