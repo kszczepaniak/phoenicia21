@@ -1,0 +1,17 @@
+body{
+    /*dzieki temu stylowi pasek menu nie zakrywa tresci strony*/
+    padding-top: 70px;
+}
+
+.required:after{
+    content: '*';
+    color: red;
+    position: absolute;
+    width: auto;
+    height: 100%;
+    left: 94%;
+}
+
+.error {
+  color: red;
+}
