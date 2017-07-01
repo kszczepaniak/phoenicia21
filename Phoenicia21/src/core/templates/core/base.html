@@ -6,34 +6,39 @@
 	    <meta http-equiv="X-UA-Compatible" content="IE=edge">
 	    <meta name="viewport" content="width=device-width, initial-scale=1">
 	    <title>ZFH's Phoenicia 2.1</title>
-	
+
 	    <!-- Bootstrap -->
 	    <link href="{% static 'bootstrap-3.2.0-dist/css/bootstrap.min.css' %}" rel="stylesheet">
-	
+
 	    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
 	    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
 	    <!--[if lt IE 9]>
 	      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
 	      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 	    <![endif]-->
-	    
+
 	    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
 	    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 	    <!-- Include all compiled plugins (below), or include individual files as needed -->
 	    <script src="{% static 'bootstrap-3.2.0-dist/js/bootstrap.min.js' %}"></script>
-	
-	    <!-- jQuery-ui ACTIVATE WHEN NEEDED 
+        <!-- jquery validation plugin -->
+        <script src="https://cdn.jsdelivr.net/jquery.validation/1.15.1/jquery.validate.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
+
+	    <!-- jQuery-ui ACTIVATE WHEN NEEDED
 	    <script src="{% static 'database/bootstrap-3.2.0-dist/js/jquery-ui.min.js' %}"></script>
 	    <link href="{% static 'database/bootstrap-3.2.0-dist/css/jquery-ui.min.css' %}" rel="stylesheet">
 	    -->
-	    
+
 	    <!-- DataTables -->
-		<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.js"></script>  
+		<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.js"></script>
 		<!-- DataTables CSS (Bootstrap) -->
 		<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/plug-ins/a5734b29083/integration/bootstrap/3/dataTables.bootstrap.css">
 		<!-- DataTables JS (Bootstrap) -->
-		<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/plug-ins/a5734b29083/integration/bootstrap/3/dataTables.bootstrap.js"></script> 
-		
+		<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/plug-ins/a5734b29083/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+        <!-- main stylesheet -->
+        <link rel="stylesheet" href="{% static 'css/main.css' %}">
+
 		<!-- skrypt z ustawieniami dla datatables -->
 	    <script>
 		$(document).ready( function () {
@@ -46,17 +51,12 @@
 		    	      "oPaginate": {"sNext": "Następna", "sPrevious": "Poprzednia"}}
 		    	});
 			} );
-		</script> 
-	  
-		<!-- dzieki temu stylowi pasek menu nie zakrywa tresci strony -->  
-		<style>
-		body 
-		{ padding-top: 70px; }
-		</style>
+		</script>
+
 	</head>
-	
+
 	<body>
-  		
+
   		<!-- pasek nawigacji: tutaj zmieniac uklad zakladek -->
 		<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
 		  <div class="container-fluid">
@@ -70,12 +70,12 @@
 		      </button>
 		      <a class="navbar-brand" href="main">Phoenicia</a>
 		    </div>
-		
+
 		    <!-- Collect the nav links, forms, and other content for toggling -->
 		    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 		      <ul class="nav navbar-nav">
-		        
-		        {% if request.user.is_staff or request.user.is_admin %}      
+
+		        {% if request.user.is_staff or request.user.is_admin %}
 		        <li class="dropdown">
 		          <a href="docs_view" class="dropdown-toggle" data-toggle="dropdown">Dokumenty <span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
@@ -90,7 +90,7 @@
 		            {% endif %}
 		          </ul>
 		        </li>
-		        
+
 		        <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
 		        {% if request.user.hufiec.id == 1 %}
 		        <li class="dropdown">
@@ -101,19 +101,19 @@
 		          	<li><a href="operations_transfer">Transfer</a></li>
 		            <li><a href="operations_bank">Bankowe</a></li>
 		            <li><a href="operations_many">Dodaj wiele</a></li>
-		            
+
 		          </ul>
 		        </li>
 		        {% endif %}
-		        
+
 		        <li class="dropdown">
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Raporty<span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
 		            <li><a href="reports_balance">Salda</a></li>
-		            <li><a href="reports_cash">Raporty kasowe</a></li>    
+		            <li><a href="reports_cash">Raporty kasowe</a></li>
 		          </ul>
 		        </li>
-		        
+
 		        <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
 		        {% if request.user.hufiec.id == 1 %}
 		        <li class="dropdown">
@@ -124,10 +124,10 @@
 		            <li><a href="invoices_upload">Zgłoś wiele</a></li>
 		          </ul>
 		        </li>
-		        
+
 		        <li><a href="https://drive.google.com/drive/folders/0B4hUkplS1WlNWDZpWWc1Sy1fYlE">Materiały</a></li>
 		        {% endif %}
-		        
+
 		        {% if request.user.is_skarbnik or request.user.is_admin %}
 		        <li class="dropdown">
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin<span class="caret"></span></a>
@@ -158,27 +158,27 @@
 		        	{% endif %}
 		          </ul>
 		        </li>
-		        
+
 		        <li class="dropdown">
 		          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Rejestracja danych <span class="caret"></span></a>
 		          <ul class="dropdown-menu" role="menu">
 		          	<li><a href="register_docs">Dokumenty</a></li>
 		            <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
-		        	{% if request.user.hufiec.id == 1 %}		          	
+		        	{% if request.user.hufiec.id == 1 %}
 		            <li><a href="#">Operacje</a></li>
 		            <li><a href="invoices_single">Faktura</a></li>
 		            <li><a href="invoices_upload">Faktury wiele</a></li>
 		            {% endif %}
 		          </ul>
 		        </li>
-				
+
 		        <!-- OGRANICZENIE DOSTEPU TYLKO DLA OCHOTY -->
-		        {% if request.user.hufiec.id == 1 %}				
+		        {% if request.user.hufiec.id == 1 %}
 				<li><a href="https://docs.google.com/folderview?id=0B4hUkplS1WlNaTRKVzA1TGpoRFU&usp=drive_web&tid=0B9d12whtcnm-YzE4ZTQ4MDktOTAwNy00NTFmLWFmODctYjdjNzYxZWUzYzQy">Materiały</a></li>
 				{% endif %}
 		        {% endif %} <!-- staff navbar end-->
 		      </ul>
-		      
+
 		      <!-- przyciski i status logowania -->
 		      <ul class="nav navbar-nav navbar-right">
 		      {% if user.is_authenticated %}
@@ -189,7 +189,7 @@
 		        <li><a href="auth_login">Zaloguj</a></li>
 		      {% endif %}
 		      </ul>
-		
+
 		    </div><!-- /.navbar-collapse -->
 		  </div><!-- /.container-fluid -->
 		</nav>

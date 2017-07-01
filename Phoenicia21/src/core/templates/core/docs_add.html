@@ -3,91 +3,91 @@
 
 <div class="container">
 	<h1><span class="glyphicon glyphicon-file"></span> Dodaj dokument</h1>
-	
+
 	<div class="row">
 		<div class="col-lg-6">
-		
-			<form class="form-horizontal" action="docs_add" method="post">{% csrf_token %}
-				<!--  WYSWIETLANIE KOMUNIKATU BLEDU -->
+
+			<form class="form-horizontal" action="docs_add" method="post" name="addDocument">{% csrf_token %}
+				<!--  WYSWIETLANIE KOMUNIKATU BLEDU
 				{% if error_log %}
 				<div class="alert alert-danger" role="alert">
 				{% if "data_dokumentu" in error_log %}
 				Proszę wpisać datę w formacie RRRR-MM-DD<br />
 				{% endif %}
-				
+
 				{% if "numer" in error_log %}
 				Proszę wpisać numer dokumentu<br />
 				{% endif %}
-				
+
 				{% if "opis" in error_log %}
 				Proszę wpisać opis dokumentu<br />
 				{% endif %}
-				
+
 				{% if "kwota" in error_log %}
 				Proszę wprowadzić prawidłową kwotę lub pozostawić puste pole<br />
 				{% endif %}
-				
+
 				{% if "kwota_oba" in error_log %}
 				Pola wpływ i wydatek nie mogą być jednocześnie większe od 0.00<br />
 				{% endif %}
-				
+
 				{% if "kwota_brak" in error_log %}
 				Pola wpływ i wydatek nie mogą być jednocześnie równe 0.00 lub puste<br />
 				{% endif %}
-				
+
 				</div>
 				{% endif %}
-				<!-- KONIEC KOMUNIKATU BLEDU -->
-				
+				 KONIEC KOMUNIKATU BLEDU -->
+
 			    <div class="form-group">
-			        <label class="control-label col-lg-3">Data dokumentu</label>
-			        <div class="col-lg-9"><input type="date" class="form-control" name="data_dokumentu"></div>
+			        <label class="control-label col-lg-3 required">Data dokumentu</label>
+			        <div class="col-lg-9"><input type="date" class="form-control" name="data_dokumentu" placeholder="2017-06-01"></div>
 			    </div>
-			    
+
 				<div class="form-group">
-					<label class="control-label col-lg-3">Typ</label>
+					<label class="control-label col-lg-3 required">Typ</label>
 					<div class="col-lg-9"><select class="form-control" name="typ">
 						{% for id, value in typy_dokumentow %}<option value="{{ id }}">{{ value }}</option>{% endfor %}
 					</select></div>
-				</div>			    
-			    
+				</div>
+
 			    <div class="form-group">
-			        <label class="control-label col-lg-3">Numer</label>
+			        <label class="control-label col-lg-3 required">Numer</label>
 			        <div class="col-lg-9"><input type="text" class="form-control" name="numer"></div>
 			    </div>
-			    
+
 			    <div class="form-group">
-			        <label class="control-label col-lg-3">Opis</label>
+			        <label class="control-label col-lg-3 required">Opis</label>
 			        <div class="col-lg-9"><input type="text" class="form-control" name="opis"></div>
 			    </div>
-			    
+
 			    <div class="form-group">
 			        <label class="control-label col-lg-3">Wpływ</label>
-			        <div class="col-lg-9"><input type="text" class="form-control" name="wplyw"></div>
+			        <div class="col-lg-9"><input type="text" placeholder='0' class="form-control kwota" name="wplyw"></div>
 			    </div>
-			    
+
 			    <div class="form-group">
 			        <label class="control-label col-lg-3">Wydatek</label>
-			        <div class="col-lg-9"><input type="text" class="form-control" name="wydatek"></div>
+			        <div class="col-lg-9"><input type="text" placeholder='0' class="form-control kwota" name="wydatek"></div>
 			    </div>
-			    
+
 			    <div class="panel-group" id="dekrety">
   					<div class="panel panel-default">
-  
+
     					<div class="panel-heading"><h4 class="panel-title">
         				<a data-toggle="collapse" data-parent="#dekrety" href="#collapseOne"><span class="glyphicon glyphicon-barcode"></span> Dekretacja</a>
     					</h4></div>
-    					
+
     					<div id="collapseOne" class="panel-collapse collapse">
       					<div class="panel-body">
-    					
+
     						<div class="form-group">
 			        		<label class="control-label col-lg-3">Wyżywienie zbiórka</label>
 			        		<div class="col-lg-9"><input type="text" class="form-control" name="dekret_wyz_zbiorka"></div>
 			        	</div>
 			        	</div>
 			    </div>
-    					
+
     				</div>
     			</div>
 
@@ -97,14 +97,14 @@
 						{% for et in etykiety %}<option value="{{ et.id }}">{{ et }}</option>{% endfor %}
 					</select></div>
 			    </div>
-			    
+
 			    <div class="form-group">
-			        <label class="control-label col-lg-3">Jednostka</label>
+			        <label class="control-label col-lg-3 required">Jednostka</label>
 			        <div class="col-lg-9"><select class="form-control" name="jednostka">
 						{% for jed in jednostki %}<option value="{{ jed.id }}">{{ jed }}</option>{% endfor %}
 					</select></div>
 			    </div>
- 
+
 			    <div class="form-group">
 			    	<label class="control-label col-lg-3">Raport</label>
 			        <div class="col-lg-5">
@@ -112,14 +112,65 @@
 			                <label><input type="checkbox" name="dodaj_do_raportu" checked="checked"> Dodaj do raportu kasowego</label>
 			        </div> </div>
 			    </div>
-    
+
 			    <div class="form-group">
 			        <div class="col-lg-offset-3 col-lg-9"><button type="submit" class="btn btn-primary">Dodaj</button></div>
 			    </div>
 			</form>
-			
+
 		</div>
 	</div>
 </div>
+<script>
+// Wait for the DOM to be ready
+$(function() {
+  // Initialize form validation on the registration form.
+  // It has the name attribute "registration"
+  $("form[name='addDocument']").validate({
+    // Specify validation rules
+    rules: {
+      // The key name on the left side is the name attribute
+      // of an input field. Validation rules are defined
+      // on the right side
+      data_dokumentu: "required",
+      typ: "required",
+      numer: {
+          required: true
+      },
+      opis: "required",
+      jednostka: "required",
+      wplyw: {
+          number: true,
+          require_from_group: [1, ".kwota"]
+      },
+      wydatek: {
+          number: true,
+          require_from_group: [1, ".kwota"]
+      }
 
+    },
+    // Specify validation error messages
+    messages: {
+      data_dokumentu: "Proszę wpisać datę w formacie RRRR-MM-DD",
+      typ: "Wybierz typ dokumentu!",
+      numer: "Podaj numer dokumentu!",
+      opis: "Wpisz opis dokumentu!",
+      jednostka: "Proszę wybierz jednostkę!",
+      wplyw: {
+          number: "Kwota wpływu musi być liczbą!",
+          require_from_group: "Jedno z tych dwóch pól musi być wypełnione!"
+      },
+      wydatek: {
+          number: "Kwota wydatku musi być liczbą!",
+          require_from_group: "Jedno z tych dwóch pól musi być wypełnione!"
+      }
+    },
+    // Make sure the form is submitted to the destination defined
+    // in the "action" attribute of the form when valid
+    submitHandler: function(form) {
+      form.submit();
+    }
+  });
+});
+</script>
 {% endblock %}
