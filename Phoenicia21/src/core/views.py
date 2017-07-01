@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from django.shortcuts import render, redirect
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
@@ -78,13 +78,9 @@ def docs_add(request):
         wydatek = 0.0 if request.POST['wydatek'] == '' else request.POST['wydatek'].replace(',', '.')
         
         # dekretacja
-        
-        # sprawdzic ponizsza linijke, zwraca nie-decimal przy dodawaniu dokumentu
-        #wyzywienie_zbiorka = request.POST['dekret_wyz_zbiorka'].replace(',', '.') if (re.search('^\d+([.,]\d{1,2})?$|^$', request.POST['dekret_wyz_zbiorka'])) else 0.0 
-        wyzywienie_zbiorka = decimal.Decimal(0.0)
-        
+                
         dokument = Dokument(data_dokumentu=request.POST['data_dokumentu'], typ=request.POST['typ'], numer=request.POST['numer'], opis=request.POST['opis'], wplyw=wplyw, 
-                            wydatek=wydatek, wyzywienie_zbiorka=wyzywienie_zbiorka, 
+                            wydatek=wydatek,
                             jednostka=jednostka, hufiec=request.user.hufiec, uzytkownik=request.user, uzytkownik_zglaszajacy=request.user, status='ZT')        
         dokument.save()
         
@@ -898,16 +894,20 @@ def admin_tags(request):
     return render(request, 'core/admin_tags.html', context)
 
 def admin_doctitle(request):
+    
+    ###!!! wymaga przebudowy do nowego systemu dekretowania
+    
     if not request.user.is_authenticated():
         return redirect('auth_login')
     elif not request.user.is_admin:
         return redirect('access_denied')
     
     if 'add' in request.POST:
-        dekret = Dekret(numer=request.POST['numer'], opis=request.POST['opis'])
-        dekret.save()    
+        pass
+        #dekret = Dekret(numer=request.POST['numer'], opis=request.POST['opis'])
+        #dekret.save()    
     
-    dekrety = Dekret.objects.all()
+    dekrety = []#Dekret.objects.all()
     context  = {'dekrety':dekrety}
     return render(request, 'core/admin_doctitle.html', context)    
 
@@ -1034,6 +1034,78 @@ def reports_cash(request):
         
         return response 
     
+    def create_hansa(request):
+        
+        def create_header():
+            
+            header =  'format\t\n'
+            header += '1\t44\t1\t0\t0\t0\t0\t-\t\n\n'
+            header += 'codepage\tUTF-8\t\n\n'    
+            header += 'HansaVersion\t\n'
+            header += '8.2 2016-12-18 (build 82211904)\tStandardERP\t\n\n'
+            header += 'commentstring\t\n\t\n\n'
+            header += 'VIVc5\t\n'
+                
+            return header
+        
+        def parse_documents(raport):
+            
+            data = []
+            
+            for dok_enum in enumerate(raport.dokument_set.all().order_by('data_dokumentu')):
+                dok = dok_enum[1]
+
+                if dok.wplyw != 0.0:
+                    kwota = str(dok.wplyw).replace('.', ',')
+                else:
+                    kwota = str(dok.wydatek).replace('.', ',') 
+                data.append([str(dok.data_dokumentu), kwota, dok.numer, str(dok.data_dokumentu+timedelta(days=7)), str(dok.data_ksiegowania), dok.opis, dok.dekret_set.all()])
+            
+            return data
+        
+        def write_document(dok, request):
+            
+            huf_hid = request.user.hufiec.numer
+            dok_hid = str(date.today().year)[2:] + huf_hid + 'xxxx'
+            
+            # dane kontrahenta
+            kontrahent_hid   = '547' # id kontrahenta w bazie Hansy
+            kontrahent_nip   = ''
+            kontrahent_adres = ''
+            
+            dok_inline     = '\t'.join([dok_hid] + dok[:3] + ['1', huf_hid, kontrahent_hid] + dok[3:4] + ['JP', dok[4], '1', '201', 'JP', 'PLN', '0', '0', huf_hid, '0', '0', '0', '1', '0', kontrahent_nip, '0', 'JP', '0', '1', '0', '0', 'VGF4TWF0cml4VmMJDTEJCQ0=', '0', '0', kontrahent_adres, '0', '7', '0']) + '\n'
+            
+            # dekretacja
+            dekrety        = dok[6]
+            dekrety_inline = []
+            for dek in dekrety:
+                
+                # tymczasowe poki nie bedzie wiadomo jakie to numerki
+                linetemp = '000000'
+                ###
+                
+                dek_line1 = '\t'.join(['1', '0', dek.typ_dekretu.numer.replace('-', ''), dok[5], str(dek.kwota), '0', 'VGF4TWF0cml4VmMJDTEJCQ0=', '0', '0']) + '\n'
+                dek_line2 = '\t'.join(['1', '0', linetemp, dek.typ_dekretu.opis, str(dek.kwota), '0', 'VGF4TWF0cml4VmMJDTEJCQ0=', '0', '0']) + '\n'
+                dek_line3 = '\t'.join(['1', '0', linetemp, u'Rozliczenie kosztów' + dek.typ_dekretu.opis, str(-dek.kwota), '0', 'VGF4TWF0cml4VmMJDTEJCQ0=', '0', '0']) + '\n'
+
+                dekrety_inline.append(dek_line1 + dek_line2 + dek_line3)
+                        
+            return dok_inline + ''.join(dekrety_inline) + '\n'
+        
+        raport  = RaportKasowy.objects.get(id=request.POST.getlist('pick')[0])
+        header  = create_header()
+        content = ''
+        data    = parse_documents(raport) # kazdy dokument to reprezentowany przez liste danych
+        
+        for dok in data:
+            content += write_document(dok, request)
+        
+        response = HttpResponse(header + content, content_type='text/plain')
+        response['Content-Disposition'] = 'attachment; filename="test"'
+        
+        
+        return response
+    
     if request.user.is_admin:
         raporty = RaportKasowy.objects.order_by('rok', 'miesiac').reverse()
     else:
@@ -1119,6 +1191,9 @@ def reports_cash(request):
             
     if 'pdf' in request.POST:
         return create_pdf(request)
+    
+    if 'hansa' in request.POST:
+        return create_hansa(request)
 
     return render(request, 'core/reports_cash.html', context)
 
