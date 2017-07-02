@@ -110,7 +110,7 @@ $.validator.addMethod('onlyOne', function(value, element, param) {
 }, "Wypełnij tylko jedno z tych dwóch pól!");
 
 $.validator.addMethod('minStrict', function (value, element, param) {
-    return this.optional(element) || value > param;
+    return this.optional(element) || value.replace(/\,/g, '.') > param;
 });
 
 // Wait for the DOM to be ready
@@ -131,16 +131,16 @@ $(function() {
       opis: "required",
       jednostka: "required",
       wplyw: {
-          number: true,
           require_from_group: [1, ".kwota"],
           onlyOne: ['wydatek'],
-          minStrict: 0
+          minStrict: 0,
+          pattern: /^(\d+|\d+,\d|\d+.\d{1,2})$/
       },
       wydatek: {
-          number: true,
           require_from_group: [1, ".kwota"],
           onlyOne: ['wplyw'],
-          minStrict: 0
+          minStrict: 0,
+          pattern: /^(\d+|\d+,\d|\d+.\d{1,2})$/
       }
 
     },
@@ -154,12 +154,14 @@ $(function() {
       wplyw: {
           number: "Kwota wpływu musi być liczbą!",
           require_from_group: "Jedno z tych dwóch pól musi być wypełnione!",
-          minStrict: "Wartość wpływu musi być większa niż 0!"
+          minStrict: "Wartość wpływu musi być większa niż 0!",
+          pattern: "Wartość wpływu musi być liczbą"
       },
       wydatek: {
           number: "Kwota wydatku musi być liczbą!",
           require_from_group: "Jedno z tych dwóch pól musi być wypełnione!",
-          minStrict: "Wartość wydatku musi być większa niż 0!"
+          minStrict: "Wartość wydatku musi być większa niż 0!",
+          pattern: "Wartość wpływu musi być liczbą"
       }
     },
     // Make sure the form is submitted to the destination defined
