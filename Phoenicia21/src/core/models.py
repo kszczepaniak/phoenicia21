@@ -5,13 +5,13 @@ from datetime import date
 class Etykieta(models.Model):
     nazwa     = models.CharField(max_length=30)
     systemowa = models.BooleanField()           # nie-usuwalna, wbudowana etykieta
-    
+
     def __str__(self):
         return self.nazwa
 
 class Dokument(models.Model):
     # pojedynczy dokument
-    
+
     data_dokumentu    = models.DateField()                                   # data wystawienia dokumentu
     data_ksiegowania  = models.DateField(auto_now_add=True)                  # data wprowadzenia do systemu
     # definicje do typu dokumentu
@@ -31,16 +31,17 @@ class Dokument(models.Model):
         (NOTA_KSIEGOWA, u'Nota ksi\u0119gowa'),
         (POLISA, 'Polisa'),
     )
-    
+    TYP_DOKUMENTU_DICT = {item[0]:item[1] for item in TYP_DOKUMENTU_CHOICES}
+
     typ = models.CharField(max_length=2,
                            choices=TYP_DOKUMENTU_CHOICES)
-    
+
     kontrahent             = models.ForeignKey('Kontrahent', blank=True, null=True)
     numer                  = models.CharField(max_length=50)
     opis                   = models.CharField(max_length=70)                      # krotki dowolny opis czego dotyczy dokument
     wplyw                  = models.DecimalField(max_digits=10, decimal_places=2)
     wydatek                = models.DecimalField(max_digits=10, decimal_places=2)
-    etykiety               = models.ManyToManyField(Etykieta) 
+    etykiety               = models.ManyToManyField(Etykieta)
     zaliczka               = models.ForeignKey('Zaliczka', blank=True, null=True)
     uzytkownik             = models.ForeignKey('Uzytkownik')
     jednostka              = models.ForeignKey('Jednostka')
@@ -55,20 +56,20 @@ class Dokument(models.Model):
         (ZATWIERDZONA, 'Zatwierdzona'),
     )
     status = models.CharField(max_length=2, choices=STATUS_CHOICES)
-    
+
     ###!!! ta funkcja byla czescia starej wersji dekretowania - trzeba zmienic
     def check_dekret_status(self):
-        
+
         def sum_dekret(self):
             return 0
-        
+
         if sum_dekret(self) == 0:
             return 'None'
         elif sum_dekret(self) == self.wydatek:
             return 'Correct'
         else:
             return 'Error'
-    
+
 class Kontrahent(models.Model):
     nazwa            = models.CharField(max_length=120)
     adres_ulica      = models.CharField(max_length=100)
@@ -91,7 +92,7 @@ class Zaliczka(models.Model):
         (ROZLICZONA, 'Rozliczona'),
     )
     status = models.CharField(max_length=3, choices=STATUS_CHOICES)
-    
+
     def is_past_due(self):
         return date.today() > self.termin_rozliczenia
 
@@ -99,7 +100,7 @@ class Zaliczka(models.Model):
 class TypDekretu(models.Model):
     numer = models.CharField(max_length=16)
     opis  = models.CharField(max_length=64)
-    
+
     def __str__(self):
         return self.numer
 
@@ -118,7 +119,7 @@ class OperacjaSalda(models.Model):
     jednostka_docelowa = models.ForeignKey('Jednostka', related_name='unit_target', null=True)
     #hufiec         = models.ForeignKey('Hufiec')
     etykiety          = models.ManyToManyField(Etykieta)
-    
+
     TRANSFER = 'TF'
     BANK     = 'BK'
     OPERATION_TYPE_CHOICES = (
@@ -131,7 +132,7 @@ class OperacjaSalda(models.Model):
 class Hufiec(models.Model):
     nazwa = models.CharField(max_length=40)
     numer = models.CharField(max_length=5)
-    
+
     def __str__(self):
         return self.nazwa
 
@@ -140,7 +141,7 @@ class Jednostka(models.Model):
     saldo                = models.DecimalField(max_digits=10, decimal_places=2)
     aktywna              = models.BooleanField()
     hufiec               = models.ForeignKey('Hufiec')
-    
+
     PODSTAWOWA     = 'PDS'
     NIEPODSTAWOWA  = 'NPD'
     SZCZEP         = 'SZP'
@@ -153,29 +154,29 @@ class Jednostka(models.Model):
         (ZESPOL_HUFCOWY, u'Zesp\u00F3\u0142 Hufcowy'),
         (TYMCZASOWA, 'Tymczasowa'),
     )
-    
+
     typ_jednostki = models.CharField(max_length=3,
                                  choices=TYP_JEDNOSTKI_CHOICES,
-                                 default=PODSTAWOWA) 
-    
+                                 default=PODSTAWOWA)
+
     def __str__(self):
         return self.nazwa
-    
+
     def balance_with_accounts(self):
         return self.saldo - sum(zal.kwota for zal in self.zaliczka_set.filter(status='AKT'))
-    
+
 class UserManager(BaseUserManager):
     def create_user(self, login, password, imie, nazwisko, email, hufiec, jednostka):
- 
+
         user = self.model(login=login, imie=imie, nazwisko=nazwisko, email=email, hufiec=hufiec)
- 
+
         user.set_password(password)
         user.save(using=self._db)
-        
+
         jednostka = Jednostka.objects.get(id=jednostka)
         user.jednostka.add(jednostka)
         return user
- 
+
     def create_superuser(self, login, password):
         user = self.create_user(login=login,
             password=password,
@@ -183,7 +184,7 @@ class UserManager(BaseUserManager):
         user.is_admin = True
         user.save(using=self._db)
         return user
-        
+
 class Uzytkownik(AbstractBaseUser):
     login     = models.CharField(max_length=40, unique=True)
     imie      = models.CharField(max_length=25)
@@ -191,30 +192,30 @@ class Uzytkownik(AbstractBaseUser):
     email     = models.CharField(max_length=60)
     jednostka = models.ManyToManyField(Jednostka)
     hufiec    = models.ForeignKey('Hufiec')
-    
+
     # pola wymagane przez Django user model
     is_active   = models.BooleanField(default=False)
     is_admin    = models.BooleanField(default=False)
     is_staff    = models.BooleanField(default=False)
     is_skarbnik = models.BooleanField(default=False)
-    
+
     objects = UserManager()
 
     USERNAME_FIELD = 'login'
-    
+
     def __str__(self):
         return self.login
-    
+
     def get_full_name(self):
         return self.login
-    
+
     def get_short_name(self):
         return self.login
-    
+
     def has_perm(self, perm, obj=None):
         # Handle whether the user has a specific permission?"
         return True
- 
+
     def has_module_perms(self, app_label):
         # Handle whether the user has permissions to view the app `app_label`?"
         return True
@@ -233,7 +234,7 @@ class RaportKasowy(models.Model):
     numer_start = models.IntegerField(default=0)
     numer_stop  = models.IntegerField(default=0)
     hufiec      = models.ForeignKey('Hufiec')
-    
+
     UTWORZONY     = 'UTW'
     ZLOZONY       = 'ZLO'
     ZAAKCEPTOWANY = 'ZAK'
@@ -256,14 +257,14 @@ class BilansOtwarcia(models.Model):
 class SposobPlatnosci(models.Model):
     nazwa       = models.CharField(max_length=50)
     numer_konta = models.CharField(max_length=40)
-    
+
     def __str__(self):
         return self.nazwa
 
 class NumeracjaFaktur(models.Model):
     rok           = models.IntegerField()
     biezacy_numer = models.IntegerField()
-    
+
     HAL = 'HAL'
     HAZ = 'HAZ'
     ROK = 'ROK'
@@ -272,10 +273,10 @@ class NumeracjaFaktur(models.Model):
         (HAZ, 'HAZ'),
         (ROK, '\u015Ar\u00F3droczna'),
     )
-    
+
     kategoria = models.CharField(max_length=3,
                     choices=CATEGORY_TYPE_CHOICES)
-    
+
     def __str__(self):
         return self.kategoria + ' ' + str(self.rok)
 
@@ -293,7 +294,7 @@ class Faktura(models.Model):
     uzytkownik       = models.ForeignKey('Uzytkownik')
     jednostka        = models.ForeignKey('Jednostka')
     #hufiec           = models.ForeignKey('Hufiec')
-    
+
     ZGLOSZONA    = 'ZG'
     ZATWIERDZONA = 'ZT'
     STATUS_TYPE_CHOICES = (
@@ -302,11 +303,11 @@ class Faktura(models.Model):
     )
     status = models.CharField(max_length=2,
                 choices=STATUS_TYPE_CHOICES)
-    
+
     ZWOLNIONE     = 'ZW'
     PIEC_PROCENT  = '05'
     OSIEM_PROCENT = '08'
-    PODSTAWOWA    = '23'    
+    PODSTAWOWA    = '23'
     VAT_TYPE_CHOICES = (
         (ZWOLNIONE, 'zw'),
         (PIEC_PROCENT, '5'),
@@ -315,5 +316,3 @@ class Faktura(models.Model):
     )
     stawka_vat = models.CharField(max_length=2,
                     choices=VAT_TYPE_CHOICES)
-    
-    

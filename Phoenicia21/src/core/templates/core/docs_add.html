@@ -8,36 +8,13 @@
 		<div class="col-lg-6">
 
 			<form class="form-horizontal" action="docs_add" method="post" name="addDocument">{% csrf_token %}
-				<!--  WYSWIETLANIE KOMUNIKATU BLEDU
-				{% if error_log %}
-				<div class="alert alert-danger" role="alert">
-				{% if "data_dokumentu" in error_log %}
-				Proszę wpisać datę w formacie RRRR-MM-DD<br />
-				{% endif %}
-
-				{% if "numer" in error_log %}
-				Proszę wpisać numer dokumentu<br />
-				{% endif %}
-
-				{% if "opis" in error_log %}
-				Proszę wpisać opis dokumentu<br />
-				{% endif %}
-
-				{% if "kwota" in error_log %}
-				Proszę wprowadzić prawidłową kwotę lub pozostawić puste pole<br />
-				{% endif %}
-
-				{% if "kwota_oba" in error_log %}
-				Pola wpływ i wydatek nie mogą być jednocześnie większe od 0.00<br />
-				{% endif %}
-
-				{% if "kwota_brak" in error_log %}
-				Pola wpływ i wydatek nie mogą być jednocześnie równe 0.00 lub puste<br />
-				{% endif %}
-
+				<!--  WYSWIETLANIE KOMUNIKATU ZWROTNEGO-->
+				{% if feedback %}
+				<div class="alert alert-{{feedback.0}} disappear" role="alert">
+                    {{feedback.1}}
 				</div>
 				{% endif %}
-				 KONIEC KOMUNIKATU BLEDU -->
+				 <!--KONIEC KOMUNIKATU ZWROTNEGO -->
 
 			    <div class="form-group">
 			        <label class="control-label col-lg-3 required">Data dokumentu</label>
@@ -124,9 +101,17 @@
 <script>
 
 $(document).ready(function(){
+setInterval(function(){
+    $('.disappear').fadeOut();
+}, 5000)
+
 $.validator.addMethod('onlyOne', function(value, element, param) {
     return this.optional(element) || $('[name="' + param[0] + '"]').is(':blank');
 }, "Wypełnij tylko jedno z tych dwóch pól!");
+
+$.validator.addMethod('minStrict', function (value, element, param) {
+    return this.optional(element) || value > param;
+});
 
 // Wait for the DOM to be ready
 $(function() {
@@ -148,12 +133,14 @@ $(function() {
       wplyw: {
           number: true,
           require_from_group: [1, ".kwota"],
-          onlyOne: ['wydatek']
+          onlyOne: ['wydatek'],
+          minStrict: 0
       },
       wydatek: {
           number: true,
           require_from_group: [1, ".kwota"],
-          onlyOne: ['wplyw']
+          onlyOne: ['wplyw'],
+          minStrict: 0
       }
 
     },
@@ -166,11 +153,13 @@ $(function() {
       jednostka: "Proszę wybierz jednostkę!",
       wplyw: {
           number: "Kwota wpływu musi być liczbą!",
-          require_from_group: "Jedno z tych dwóch pól musi być wypełnione!"
+          require_from_group: "Jedno z tych dwóch pól musi być wypełnione!",
+          minStrict: "Wartość wpływu musi być większa niż 0!"
       },
       wydatek: {
           number: "Kwota wydatku musi być liczbą!",
-          require_from_group: "Jedno z tych dwóch pól musi być wypełnione!"
+          require_from_group: "Jedno z tych dwóch pól musi być wypełnione!",
+          minStrict: "Wartość wydatku musi być większa niż 0!"
       }
     },
     // Make sure the form is submitted to the destination defined
