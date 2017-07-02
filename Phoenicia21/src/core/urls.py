@@ -1,8 +1,8 @@
-from django.conf.urls import url
+from django.conf.urls import patterns, url
 
 from . import views
 
-urlpatterns = [
+urlpatterns = patterns('',
     url(r'^$', views.main, name='main'),
     url(r'main$', views.main, name='main'),
     url(r'docs_add$', views.docs_add, name='docs_add'),
@@ -31,4 +31,4 @@ urlpatterns = [
     url(r'invoices_upload$', views.invoices_upload, name='invoices_upload'),
     url(r'invoices_single$', views.invoices_single, name='invoices_single'),
     url(r'register_docs$', views.register_docs, name='register_docs'),
-]
+)

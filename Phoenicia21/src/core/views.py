@@ -1,5 +1,5 @@
 from datetime import date
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, render_to_response
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate, login, logout
@@ -16,6 +16,7 @@ from django.http import HttpResponse
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab import rl_config
 from django.template.context_processors import request
+from django.template import RequestContext
 
 # email uzywany przez system do rozsylania wiadomosci
 EMAIL_SYSTEMU = 'kszczepaniak@gmx.com'
@@ -26,6 +27,24 @@ MIESIACE = ((1, u'Stycze\u0144'), (2, 'Luty'), (3, 'Marzec'),
             (4, u'Kwiecie\u0144'), (5, 'Maj'), (6, 'Czerwiec'),
             (7, 'Lipiec'), (8, u'Sierpie\u0144'), (9, u'Wrzesie\u0144'),
             (10, u'Pa\u017Adziernik'), (11, 'Listopad'), (12, u'Grudzie\u0144'))
+
+
+def test_500(request):
+    # Return an "Internal Server Error" 500 response code.
+    return HttpResponse(status=500)
+
+def handler404(request):
+    response = render_to_response('404.html', {},
+                                  context_instance=RequestContext(request))
+    response.status_code = 404
+    return response
+
+
+def handler500(request):
+    response = render_to_response('500.html', {},
+                                  context_instance=RequestContext(request))
+    response.status_code = 500
+    return response
 
 def main(request):
     if not request.user.is_authenticated():
