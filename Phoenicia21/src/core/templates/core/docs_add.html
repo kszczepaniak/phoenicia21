@@ -58,7 +58,7 @@
 
 			    <div class="form-group">
 			        <label class="control-label col-lg-3 required">Opis</label>
-			        <div class="col-lg-9"><input type="text" class="form-control" name="opis"></div>
+			        <div class="col-lg-9"><input type="text" class="form-control" name="opis" maxlength="70"></div>
 			    </div>
 
 			    <div class="form-group">
@@ -122,6 +122,12 @@
 	</div>
 </div>
 <script>
+
+$(document).ready(function(){
+$.validator.addMethod('onlyOne', function(value, element, param) {
+    return this.optional(element) || $('[name="' + param[0] + '"]').is(':blank');
+}, "Wypełnij tylko jedno z tych dwóch pól!");
+
 // Wait for the DOM to be ready
 $(function() {
   // Initialize form validation on the registration form.
@@ -141,11 +147,13 @@ $(function() {
       jednostka: "required",
       wplyw: {
           number: true,
-          require_from_group: [1, ".kwota"]
+          require_from_group: [1, ".kwota"],
+          onlyOne: ['wydatek']
       },
       wydatek: {
           number: true,
-          require_from_group: [1, ".kwota"]
+          require_from_group: [1, ".kwota"],
+          onlyOne: ['wplyw']
       }
 
     },
@@ -171,6 +179,7 @@ $(function() {
       form.submit();
     }
   });
+});
 });
 </script>
 {% endblock %}
